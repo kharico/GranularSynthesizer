@@ -19,7 +19,9 @@ static SLAndroidSimpleBufferQueueItf bqPlayerBufferQueue;
 static SLVolumeItf bqPlayerVolume;
 static jint   bqPlayerBufSize = 0;
 
-// recorder interface
+// Oscillator player interfaces
+static SLObjectItf oscPlayerObject = NULL;
+static SLPlayItf oscPlayerPlay;
 static SLAndroidSimpleBufferQueueItf recorderBufferQueue;
 
 // buffer data
@@ -27,50 +29,63 @@ static SLAndroidSimpleBufferQueueItf recorderBufferQueue;
 #define SAMPLINGRATE SL_SAMPLINGRATE_44_1
 short outputBuffer[BUFFERFRAMES];
 short inputBuffer[BUFFERFRAMES];
-short fxBuffer[BUFFERFRAMES];
 
+// oscillator data
 int amp = 10000;
-double const twopi = 2.0f * M_PI;
+const double twopi = 2.0f * M_PI;
 double freq = 440.0f;
+double sliderVal = 0.0f;
 double phase = 0.0f;
-
+jboolean pwr = JNI_FALSE;
 
 // thread locks
 void* inlock;
 void* outlock;
 
-__attribute__((constructor)) static void onDlOpen(void)
+void Java_kharico_granularsynthesizer_MainActivity_oscillatorOn (JNIEnv* env, jclass clazz, jboolean On)
 {
-    unsigned i;
-    for (i = 0; i < BUFFERFRAMES; ++i) {
-        inputBuffer[i] = (short) (amp * sin(phase));
-        phase += twopi * freq / SAMPLINGRATE;
+    pwr = On;
+    if (pwr) {
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Power ON");
     }
-}
+    else {
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Power OFF");
+    }
+};
 
-// this callback handler is called every time a buffer finishes playing
-void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
+void Java_kharico_granularsynthesizer_MainActivity_freqChange (JNIEnv* env, jclass clazz, jdouble sliderVal)
 {
-    assert(bq == bqPlayerBufferQueue);
-    assert(NULL == context);
-
-    notifyThreadLock(inlock);
-    notifyThreadLock(outlock);
+    freq = 440.0f + 440.0f * sliderVal;
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"freq: %f", freq);
 }
 
 // this callback handler is called every time a buffer finishes recording
-void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
+void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
 {
-    assert(bq == recorderBufferQueue);
+    notifyThreadLock(inlock);
+    notifyThreadLock(outlock);
+
+    assert(bq == bqPlayerBufferQueue);
     assert(NULL == context);
 
     waitThreadLock(inlock);
 
     // signal processing
     unsigned int j;
-
+    //phase = 0.0f;
     for (j = 0; j < BUFFERFRAMES; j++) {
-        outputBuffer[j] = inputBuffer[j];
+        if (pwr) {
+            double w = twopi * freq / SL_SAMPLINGRATE_44_1;
+
+            //inputBuffer[j] = (short) (amp * sin(phase));
+            inputBuffer[j] = (short) sin(w * j + phase);
+            //phase += twopi * freq / SL_SAMPLINGRATE_44_1;
+
+            outputBuffer[j] = inputBuffer[j];
+        }
+        else {
+            outputBuffer[j] = 0;
+        }
     }
 
     SLresult result;
@@ -85,6 +100,7 @@ void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
 // create the engine and output mix objects
 void Java_kharico_granularsynthesizer_MainActivity_createEngine(JNIEnv* env, jclass clazz)
 {
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Engine");
     inlock = createThreadLock();
     outlock = createThreadLock();
 
@@ -122,6 +138,7 @@ void Java_kharico_granularsynthesizer_MainActivity_createEngine(JNIEnv* env, jcl
 void Java_kharico_granularsynthesizer_MainActivity_createBufferQueueAudioPlayer(JNIEnv* env,
                                                                       jclass clazz, jint sampleRate, jint bufSize)
 {
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"BufferQueue");
     SLresult result;
     if (sampleRate >= 0 && bufSize >= 0 ) {
         bqPlayerBufSize = bufSize;
@@ -178,12 +195,28 @@ void Java_kharico_granularsynthesizer_MainActivity_createBufferQueueAudioPlayer(
     result = (*bqPlayerPlay)->SetPlayState(bqPlayerPlay, SL_PLAYSTATE_PLAYING);
     assert(SL_RESULT_SUCCESS == result);
     (void)result;
+
+    unsigned i;
+    for (i = 0; i < BUFFERFRAMES; ++i) {
+        inputBuffer[i] = (short) (amp * sin(phase));
+        phase += twopi * freq / SAMPLINGRATE;
+    }
+
+    i = 0, phase = 0.0f;
+    for (i = 0; i < BUFFERFRAMES; ++i) {
+        outputBuffer[i] = (short) (amp * sin(phase));
+        phase += twopi * freq / SAMPLINGRATE;
+    }
+
+    result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outputBuffer, BUFFERFRAMES);
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
 }
 
 // shut down the native audio system
 void Java_kharico_granularsynthesizer_MainActivity_shutdown(JNIEnv* env, jclass clazz)
 {
-
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Shutdown");
     // destroy buffer queue audio player object, and invalidate all associated interfaces
     if (bqPlayerObject != NULL) {
         (*bqPlayerObject)->Destroy(bqPlayerObject);

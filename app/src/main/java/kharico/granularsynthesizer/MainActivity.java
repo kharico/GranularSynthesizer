@@ -5,10 +5,20 @@ import android.media.AudioManager;
 import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.SeekBar;
 
 public class MainActivity extends AppCompatActivity {
+
+    Button oscPower;
+    boolean pwrOn = false;
+    SeekBar freqControl;
+    double sliderVal;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,6 +43,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         createBufferQueueAudioPlayer(sampleRate, bufSize);
+
+       oscPower = (Button)findViewById(R.id.pwr_switch);
+       freqControl = (SeekBar) findViewById(R.id.freq);
+       freqControl.setOnSeekBarChangeListener(listener);
     }
 
     @Override
@@ -64,7 +78,45 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
+    SeekBar.OnSeekBarChangeListener listener = new SeekBar.OnSeekBarChangeListener() {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            if (fromUser) {
+                sliderVal = progress / (double) seekBar.getMax();
+                freqChange(sliderVal);
+            }
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+
+        }
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {
+
+        }
+    };
+
+    public void switchPower (View view) {
+        if (pwrOn) {
+            oscillatorOn(false);
+            pwrOn = false;
+        }
+        else {
+            oscillatorOn(true);
+            pwrOn = true;
+        }
+    }
+
     public static native void createEngine();
     public static native void createBufferQueueAudioPlayer(int sampleRate, int samplesPerBuf);
     public static native void shutdown();
+    public static native void oscillatorOn(boolean On);
+    public static native void freqChange(double sliderVal);
+
+    /** Load jni .so on initialization */
+    static {
+        System.loadLibrary("native-audio");
+    }
 }
