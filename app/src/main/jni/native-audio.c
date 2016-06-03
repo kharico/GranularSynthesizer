@@ -34,7 +34,7 @@ short inputBuffer[BUFFERFRAMES];
 int amp = 10000;
 const double twopi = 2.0f * M_PI;
 double freq = 440.0f;
-double sliderVal = 0.0f;
+//double sliderVal = 0.0f;
 double phase = 0.0f;
 jboolean pwr = JNI_FALSE;
 
