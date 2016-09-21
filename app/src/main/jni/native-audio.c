@@ -25,19 +25,22 @@ static SLPlayItf oscPlayerPlay;
 static SLAndroidSimpleBufferQueueItf recorderBufferQueue;
 
 // buffer data
-#define BUFFERFRAMES 480
+#define BUFFERFRAMES 441
 #define SAMPLINGRATE SL_SAMPLINGRATE_44_1
 short outputBuffer[BUFFERFRAMES];
 short inputBuffer[BUFFERFRAMES];
 
 // oscillator data
-int amp = 10000;
+int amp = 32768;
 const double twopi = 2.0f * M_PI;
-double freq = 440.0f;
-//double sliderVal = 0.0f;
+double carrierFreq = 453.2f;
+double lowFreq = 0.0f;
 double phase = 0.0f;
+double a = 0.0f;
+double cut_freq = 0.0f;
 jboolean pwr = JNI_FALSE;
-
+int note_num = 0;
+int cycles = 0;
 // thread locks
 void* inlock;
 void* outlock;
@@ -55,9 +58,56 @@ void Java_kharico_granularsynthesizer_MainActivity_oscillatorOn (JNIEnv* env, jc
 
 void Java_kharico_granularsynthesizer_MainActivity_freqChange (JNIEnv* env, jclass clazz, jdouble sliderVal)
 {
-    freq = 440.0f + 440.0f * sliderVal;
-    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"freq: %f", freq);
+    //lowFreq = 0.0f + 440.0f * sliderVal;
+    //carrierFreq = 453.2f + 453.2f * sliderVal;
+    //a = 0.0f + 0.99f * sliderVal;
+    cut_freq = 0.0f + 22050.0f * sliderVal;
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"freq: %f", cut_freq);
 }
+
+/* freq = fundamental frequency
+ * j = index
+ * k = harmonic
+ */
+double sinWaveGenerator(double freq, uint j, uint k) {
+    phase += twopi * j * k * freq / SAMPLINGRATE;
+    if (phase > twopi) {
+        phase -= twopi;
+    }
+    return sin(phase);
+}
+
+// Discrete Summation Formula
+double DSF (double x,   // input
+            double a,   // a<1.0
+            double N,   // N<SmpleFQ/2
+            double fi ) // phase
+{
+    double s1 = pow(a, N-1.0) * sin((N-1.0)*x+fi);
+    double s2 = pow(a,N) * sin(N*x+fi);
+    double s3 = a * sin(x+fi);
+    double s4 = 1.0 - (2*a*cos(x)) + (a*a);
+    if (s4 == 0)
+        return 0;
+    else
+        return (sin(fi) - s3 - s2 + s1)/s4;
+}
+
+//Low Pass Filter
+short LPF(short *in, short *out, double cutoff) {
+    double resonance = 0.1;
+
+    double c = 1.0 / tan(M_PI * cutoff / SAMPLINGRATE);
+    double a1 = 1.0 / ( 1.0 + resonance * c + c * c);
+    double a2 = 2* a1;
+    double a3 = a1;
+    double b1 = 2.0 * ( 1.0 - c*c) * a1;
+    double b2 = ( 1.0 - resonance * c + c * c) * a1;
+
+    short filterOut = (short) (a1 * (*(in)) + a2 * (*(in-1)) + a3 * (*(in-2)) - b1 * (*(out-1)) - b2 * (*(out-2)));
+    return filterOut;
+}
+
 
 // this callback handler is called every time a buffer finishes recording
 void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
@@ -75,13 +125,28 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     //phase = 0.0f;
     for (j = 0; j < BUFFERFRAMES; j++) {
         if (pwr) {
-            double w = twopi * freq / SL_SAMPLINGRATE_44_1;
+            /*
+            inputBuffer[j] = (short) ((amp/2 * sinWaveGenerator(261.626)) +
+                    (amp/4 * sinWaveGenerator(329.628)) + (amp/8 * sinWaveGenerator(391.995)) +
+                    (amp/8 * sinWaveGenerator(523.251)));
+            */
+            //inputBuffer[j] = (short) ((amp * sinWaveGenerator(carrierFreq, j)) * sinWaveGenerator(lowFreq, j));
+            //inputBuffer[j] = (short) ((amp * sinWaveGenerator(carrierFreq * sinWaveGenerator(lowFreq, j), j)));
+            double x0 = sinWaveGenerator(carrierFreq, j, 1);
+            double x1 = sinWaveGenerator(carrierFreq, j, 2);
+            double x2 = sinWaveGenerator(carrierFreq, j, 3);
+            double x3 = sinWaveGenerator(carrierFreq, j, 4);
 
-            //inputBuffer[j] = (short) (amp * sin(phase));
-            inputBuffer[j] = (short) sin(w * j + phase);
-            //phase += twopi * freq / SL_SAMPLINGRATE_44_1;
+            double d0 = DSF(x0, a, carrierFreq, phase);
+            double d1 = DSF(x1, a, carrierFreq, phase);
+            double d2 = DSF(x2, a, carrierFreq, phase);
+            double d3 = DSF(x3, a, carrierFreq, phase);
+            inputBuffer[j] = (short) (((3*amp)/4 * d0) + (amp/8 * d1) + (amp/12 * d2) + (amp/16 * d3));
 
-            outputBuffer[j] = inputBuffer[j];
+            //outputBuffer[j] = inputBuffer[j];
+            short *in = &inputBuffer[j];
+            short *out = &outputBuffer[j];
+            outputBuffer[j] = LPF(in, out, cut_freq);
         }
         else {
             outputBuffer[j] = 0;
@@ -197,15 +262,15 @@ void Java_kharico_granularsynthesizer_MainActivity_createBufferQueueAudioPlayer(
     (void)result;
 
     unsigned i;
-    for (i = 0; i < BUFFERFRAMES; ++i) {
-        inputBuffer[i] = (short) (amp * sin(phase));
-        phase += twopi * freq / SAMPLINGRATE;
+    for (i = 0; i < BUFFERFRAMES; i++) {
+        inputBuffer[i] = (short) (amp * sinWaveGenerator(carrierFreq, i, 1));
+        //
     }
 
     i = 0, phase = 0.0f;
-    for (i = 0; i < BUFFERFRAMES; ++i) {
-        outputBuffer[i] = (short) (amp * sin(phase));
-        phase += twopi * freq / SAMPLINGRATE;
+    for (i = 0; i < BUFFERFRAMES; i++) {
+        outputBuffer[i] = (short) (amp * sinWaveGenerator(carrierFreq, i, 1));
+        //phase += twopi * freq / SAMPLINGRATE;
     }
 
     result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outputBuffer, BUFFERFRAMES);
