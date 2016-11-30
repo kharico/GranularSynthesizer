@@ -63,8 +63,8 @@ short outBuffer[synthSamples];
 
 //GRAIN
 StochasticDelayLineGranulator *granulator;
-int maxGrains = 100;
-double maxDelaySeconds = 10;
+int maxGrains = 1;
+double maxDelaySeconds = 1;
 float* grainBuffer;
 //StochasticDelayLineGranulator granulator =  StochasticDelayLineGranulator(maxGrains, maxDelaySeconds, SAMPLINGRATE);
 
@@ -98,7 +98,7 @@ __attribute__((constructor)) static void onDlOpen(void)
         outBuffer[i] = (short)(sawSynthBuffer[i]*32768) ;
     }
 
-    //granulator = new StochasticDelayLineGranulator(maxGrains, maxDelaySeconds, SAMPLINGRATE);
+    granulator = new StochasticDelayLineGranulator(maxGrains, maxDelaySeconds, SAMPLINGRATE);
     /*granulator->interonsetTime(.0001, 2.);
     granulator->grainDuration(.001, 1.);
     granulator->delayTime(0, 0);
