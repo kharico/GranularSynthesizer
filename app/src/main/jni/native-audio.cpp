@@ -63,8 +63,8 @@ short outBuffer[synthSamples];
 
 //GRAIN
 StochasticDelayLineGranulator *granulator;
-int maxGrains = 1;
-double maxDelaySeconds = 1;
+int maxGrains = 100;
+double maxDelaySeconds = 4; //allocation error at > 5 sec
 float* grainBuffer;
 //StochasticDelayLineGranulator granulator =  StochasticDelayLineGranulator(maxGrains, maxDelaySeconds, SAMPLINGRATE);
 
@@ -75,6 +75,24 @@ WaveTableOsc *osc;
                                       of the lowest octave table) for constant table size; set to
                                       0 for a constant oversampling ratio */
 
+
+
+void mallocTest () {
+    int i;
+    for (i = 1; i <= 10; i++) {
+        maxDelaySeconds = i;
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"maxDelaySeconds: %d\n", i);
+        granulator = new StochasticDelayLineGranulator(maxGrains, maxDelaySeconds, SAMPLINGRATE);
+
+        //if allocation exception, print error
+        //print size of allocation
+        //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"granulator size: %d\n\n", sizeof(granulator));
+        delete granulator;
+        granulator = NULL;
+    }
+
+    return;
+}
 
 // synthesize a mono sawtooth wave and place it into a buffer (called automatically on load)
 __attribute__((constructor)) static void onDlOpen(void)
@@ -99,7 +117,7 @@ __attribute__((constructor)) static void onDlOpen(void)
     }
 
     granulator = new StochasticDelayLineGranulator(maxGrains, maxDelaySeconds, SAMPLINGRATE);
-    /*granulator->interonsetTime(.0001, 2.);
+    granulator->interonsetTime(.0001, 2.);
     granulator->grainDuration(.001, 1.);
     granulator->delayTime(0, 0);
     granulator->playbackRate(.1, 10.);
@@ -107,13 +125,18 @@ __attribute__((constructor)) static void onDlOpen(void)
     granulator->sustain(0., 1.);
     granulator->skew(-1., 1.);
     granulator->feedback(.95);
-     */
+
+
+    //mallocTest();
 }
+
+
 
 extern "C" void Java_kharico_granularsynthesizer_MainActivity_oscillatorOn (JNIEnv* env, jclass clazz, jboolean On)
 {
     pwr = On;
     if (pwr) {
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Power ON");
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Power ON");
     }
     else {
@@ -137,7 +160,7 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_freqChange (JNIEnv
 
 
 float* filterAudio( StochasticDelayLineGranulator* filter, float input[]){
-    static const int length = 441;
+    static const int length = synthSamples;
     float output[length];
 
     std::fill_n( output, length, 0);  // zero output
@@ -206,8 +229,11 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     //phase = 0.0f;
 
     if (pwr) {
-        //grainBuffer = filterAudio(granulator, sawSynthBuffer);
-        //outBuffer = (short)grainBuffer;
+        grainBuffer = filterAudio(granulator, sawSynthBuffer);
+        for (int i = 0; i < synthSamples; i++) {
+            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", grainBuffer[i]);
+            outBuffer[i] = (short)(grainBuffer[i]*32768) ;
+        }
     }
 
     //for (j = 0; j < BUFFERFRAMES; j++) {
@@ -255,12 +281,7 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
 
     //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outputBuffer, BUFFERFRAMES);
     //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, sawSweepBuffer, SAWTOOTH_FRAMES);
-    if (pwr) {
-        //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, grainBuffer, synthSamples);
-    }
-    else {
-        result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, synthSamples);
-    }
+    result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, synthSamples);
     //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, sawSynthBuffer, synthSamples);
     assert(SL_RESULT_SUCCESS == result);
     (void)result;

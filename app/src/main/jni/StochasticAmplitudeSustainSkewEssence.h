@@ -25,6 +25,7 @@
 #define INCLUDED_STOCHASTICAMPLITUDESUSTAINSKEWESSENCE_H
 
 #include <cassert>
+#include <stddef.h>
 
 #include "Random.h"
 #include "BasicAmplitudeSustainSkewEssence.h"
@@ -52,7 +53,7 @@ public:
     }
     
     StochasticAmplitudeSustainSkewEssence& skew( double min, double max ) {
-        assert( min >= .1 && max <= 1. );
+        assert( min >= -1. && max <= 1. );
         skewGenerator_.range( min, max );
         return *this;
     }
