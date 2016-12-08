@@ -38,8 +38,11 @@
 
 #include "Grain.h"
 #include "Scheduler.h"
+#include "native-audio.h"
 
-                         
+#include <android/log.h>
+#define TAG "delayLine"
+
 class StochasticDelayLineGranulator{
 public:
     typedef Grain<  DelayLineTapSource<StochasticDelaySamplesPlaybackRateEssence>, StochasticDelaySamplesPlaybackRateEssence,
@@ -116,10 +119,12 @@ public:
 
         for( size_t i=0; i<length; ++i ){
             // smallNoise_ stops denormal problems on i86
-            delayLine_.write( dcBlocker_(   smallNoise_.generate() +
+            delayLine_.write( dcBlocker_(   //smallNoise_.generate() +
                                             input[i] +
                                             output[i] * feedback_ ) );
+            //__android_log_print(ANDROID_LOG_DEBUG, TAG,"out * feedback: %f\n", output[i] * feedback_);
         }
+
     }
 
 private:

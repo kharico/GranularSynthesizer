@@ -117,6 +117,7 @@ __attribute__((constructor)) static void onDlOpen(void)
     }
 
     granulator = new StochasticDelayLineGranulator(maxGrains, maxDelaySeconds, SAMPLINGRATE);
+
     granulator->interonsetTime(.0001, 2.);
     granulator->grainDuration(.001, 1.);
     granulator->delayTime(0, 0);
@@ -127,6 +128,16 @@ __attribute__((constructor)) static void onDlOpen(void)
     granulator->feedback(.95);
 
 
+    /*
+    granulator->interonsetTime(.01, .011);
+    granulator->grainDuration(.048, .05);
+    granulator->delayTime(.1, .1);
+    granulator->playbackRate(1, 1);
+    granulator->amplitude(.3, .3);
+    granulator->sustain(.5, .5);
+    granulator->skew(0, 0);
+    granulator->feedback(0);
+    */
     //mallocTest();
 }
 
@@ -136,7 +147,6 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_oscillatorOn (JNIE
 {
     pwr = On;
     if (pwr) {
-        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Power ON");
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Power ON");
     }
     else {
@@ -231,7 +241,7 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     if (pwr) {
         grainBuffer = filterAudio(granulator, sawSynthBuffer);
         for (int i = 0; i < synthSamples; i++) {
-            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", grainBuffer[i]);
+            //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", grainBuffer[i]);
             outBuffer[i] = (short)(grainBuffer[i]*32768) ;
         }
     }

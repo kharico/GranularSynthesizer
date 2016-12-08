@@ -24,6 +24,9 @@
 #ifndef INCLUDED_BASICAMPLITUDESKEWSUSTAINESSENCE_H
 #define INCLUDED_BASICAMPLITUDESKEWSUSTAINESSENCE_H
 
+#include <assert.h>
+#include <stddef.h>
+
 /*
     BasicAmplitudeSkewSustainEssence models:
     

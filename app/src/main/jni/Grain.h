@@ -24,6 +24,9 @@
 #ifndef INCLUDED_GRAIN_H
 #define INCLUDED_GRAIN_H
 
+#include <stddef.h>
+#include "StochasticDelayLineGranulator.h"
+#define TAG "delayLine"
 /*
     Grain models concept GrainT (see Scheduler.h)
 
@@ -69,9 +72,14 @@ public:
                 envelope_.nextBoundary( source_.nextBoundary( remaining ) );
 
             float *end = output + nextBoundary;
+            //__android_log_print(ANDROID_LOG_DEBUG, TAG,"out: %f\n", *output);
             do{
                 envelope_.advance();
-				*output++ += source_( *envelope_ );
+				//*output++ += source_( *envelope_ );
+                *output += source_( *envelope_ );
+                // why is source 0?
+                __android_log_print(ANDROID_LOG_DEBUG, TAG,"source: %f\n", source_( *envelope_ ));
+                output++;
             }while( output < end );
             
 			envelope_.checkBoundary( nextBoundary );

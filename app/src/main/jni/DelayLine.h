@@ -67,7 +67,7 @@ public:
         double readIndex_;
         double increment_;
 	};
-    friend FixedRateTap;
+    //friend FixedRateTap;
 
 
 	DelayLine( unsigned long maximumDelaySamples )

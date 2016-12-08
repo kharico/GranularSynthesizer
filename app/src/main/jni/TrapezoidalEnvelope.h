@@ -26,6 +26,8 @@
 
 #include <ctype.h>
 #include <cassert>
+#include <stddef.h>
+#include <algorithm>
 
 /*
     TrapezoidalEnvelope models GrainEnvelopeT (see Grain.h)

@@ -24,6 +24,7 @@
 #ifndef INCLUDED_STOCHASTICDELAYSAMPLESPLAYBACKRATEESSENCE_H
 #define INCLUDED_STOCHASTICDELAYSAMPLESPLAYBACKRATEESSENCE_H
 
+#include <stddef.h>
 #include "Random.h"
 
 /*
@@ -41,7 +42,7 @@ class DelayLine;
 class StochasticDelaySamplesPlaybackRateEssence{
 public:
     StochasticDelaySamplesPlaybackRateEssence()
-        : delayLine_( NULL )
+        : delayLine_(NULL)
         , delaySamplesGenerator_( 100., 1000.)
         , playbackRateGenerator_( 1., 1. ) {}
 
