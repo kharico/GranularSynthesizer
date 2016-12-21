@@ -25,7 +25,9 @@
 #define INCLUDED_GRAIN_H
 
 #include <stddef.h>
+#include <android/log.h>
 #include "StochasticDelayLineGranulator.h"
+//#include <android/log.h>
 #define TAG "delayLine"
 /*
     Grain models concept GrainT (see Scheduler.h)
@@ -78,8 +80,10 @@ public:
 				//*output++ += source_( *envelope_ );
                 *output += source_( *envelope_ );
                 // why is source 0?
-                __android_log_print(ANDROID_LOG_DEBUG, TAG,"source: %f\n", source_( *envelope_ ));
+                //__android_log_print(ANDROID_LOG_DEBUG, TAG,"source: %f\n", source_( *envelope_ ));
+                //__android_log_print(ANDROID_LOG_DEBUG, TAG,"source_before: %f\n",*output);
                 output++;
+                //__android_log_print(ANDROID_LOG_DEBUG, TAG,"source_AFTER: %f\n",*output);
             }while( output < end );
             
 			envelope_.checkBoundary( nextBoundary );
