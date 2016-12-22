@@ -25,9 +25,10 @@
 #define INCLUDED_DELAYLINETAPSOURCE_H
 
 #include <ctype.h>
+#include <android/log.h>
 
 #include "DelayLine.h"
-
+#define TAG "delayTap"
 /*
     DelayLineTapSource models GrainSourceT (see Grain.h)
 
@@ -52,7 +53,9 @@ public:
 
     float operator()( float envelopeValue ){
         float result = envelopeValue * *delayTap_;
+
         ++delayTap_;
+
         return result;
     }
 

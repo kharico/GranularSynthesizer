@@ -36,9 +36,9 @@
 
 #include "StochasticInteronsetTimeSequenceStrategy.h"
 
+#include "native-audio.h"
 #include "Grain.h"
 #include "Scheduler.h"
-#include "native-audio.h"
 
 #include <android/log.h>
 #define TAG "delayLine"
@@ -122,7 +122,7 @@ public:
             delayLine_.write( dcBlocker_(   //smallNoise_.generate() +
                                             input[i] +
                                             output[i] * feedback_ ) );
-            //__android_log_print(ANDROID_LOG_DEBUG, TAG,"out * feedback: %f\n", output[i] * feedback_);
+            //__android_log_print(ANDROID_LOG_DEBUG, TAG,"out: %f\n", delayLine_.delayBuffer_[9]);
         }
 
     }

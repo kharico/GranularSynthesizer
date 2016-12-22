@@ -59,9 +59,9 @@ public:
     DelayLine& delayLine() const { return *delayLine_; }
     double delaySamples() const { return delaySamplesGenerator_.generate(); }
     double playbackRate() const { return playbackRateGenerator_.generate(); }
-
-private:
     DelayLine *delayLine_;
+private:
+    //DelayLine *delayLine_;
     mutable RangedDoubleRandomNumberGenerator delaySamplesGenerator_;
     mutable RangedDoubleRandomNumberGenerator playbackRateGenerator_;
 };

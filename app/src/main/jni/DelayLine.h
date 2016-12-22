@@ -28,6 +28,7 @@
 #include <cmath>
 #include <vector>
 
+#define TAG "delayLine"
 /*
     Not the most efficient DelayLine imaginable. The Tap could use
     the nextBoundary()/checkBoundary() mechanism for example.
@@ -52,10 +53,15 @@ public:
         float operator*() const {
             unsigned long i = std::floor( readIndex_ ); // use a more efficient alternative on windows
             float fraction = readIndex_ - i;
+            //__android_log_print(ANDROID_LOG_DEBUG, TAG,"ul: %lu\n",i);
+            //for (unsigned long j = 0; j < delayLine_.bufferLength_; j++) {
+            //    __android_log_print(ANDROID_LOG_DEBUG, TAG, "delay value:%lu : %f\n", j,
+            //                        delayLine_.delayBuffer_[j]);
+            //}
             return delayLine_.delayBuffer_[i] +
                 (delayLine_.delayBuffer_[i+1]-delayLine_.delayBuffer_[i]) * fraction;
         }
-
+        DelayLine& delayLine_;
     private:
         static double makeReadIndex( DelayLine& delayLine, double delaySamples ){
             double result = delayLine.writeIndex_ - delaySamples;
@@ -63,11 +69,12 @@ public:
                 result += delayLine.bufferLength_;
             return result;
         }
-        DelayLine& delayLine_;
+        //DelayLine& delayLine_;
         double readIndex_;
         double increment_;
 	};
     //friend FixedRateTap;
+    friend DelayLine::FixedRateTap;
 
 
 	DelayLine( unsigned long maximumDelaySamples )
@@ -99,11 +106,11 @@ public:
         for( size_t i=0; i<length; i++ )
             write( input[i] );
     }
-
+    float *delayBuffer_;
 private:
     unsigned long bufferLength_;
     unsigned long writeIndex_;
-    float *delayBuffer_;
+    //float *delayBuffer_;
 };
 
 #endif /* INCLUDED_DELAYLINE_H */

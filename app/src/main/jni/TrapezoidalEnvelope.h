@@ -28,7 +28,7 @@
 #include <cassert>
 #include <stddef.h>
 #include <algorithm>
-
+#define TAG "Envelope"
 /*
     TrapezoidalEnvelope models GrainEnvelopeT (see Grain.h)
 
@@ -61,6 +61,7 @@ public:
     }
 
     float operator*() const {
+        //__android_log_print(ANDROID_LOG_DEBUG, TAG,"envelope value: %f\n",value_);
         return value_;
     }
     

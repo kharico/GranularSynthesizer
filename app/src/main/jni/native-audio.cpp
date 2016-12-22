@@ -174,7 +174,13 @@ float* filterAudio( StochasticDelayLineGranulator* filter, float input[]){
     float output[length];
 
     std::fill_n( output, length, 0);  // zero output
+    //for (int i = 0; i < synthSamples; i++) {
+    //    output[i] = input[i];
+    //}
     filter->synthesize( output, input, length );
+    //for (int i = 0; i < synthSamples; i++) {
+    //    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", output[i]);
+    // }
     float *grains = output;
     return grains;
 }
@@ -241,6 +247,7 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     if (pwr) {
         grainBuffer = filterAudio(granulator, sawSynthBuffer);
         for (int i = 0; i < synthSamples; i++) {
+            //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", sawSynthBuffer[i]);
             //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", grainBuffer[i]);
             outBuffer[i] = (short)(grainBuffer[i]*32768) ;
         }

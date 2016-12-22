@@ -27,7 +27,7 @@
 #include <stddef.h>
 #include <android/log.h>
 #include "StochasticDelayLineGranulator.h"
-//#include <android/log.h>
+#include <android/log.h>
 #define TAG "delayLine"
 /*
     Grain models concept GrainT (see Scheduler.h)
@@ -79,6 +79,7 @@ public:
                 envelope_.advance();
 				//*output++ += source_( *envelope_ );
                 *output += source_( *envelope_ );
+                //__android_log_print(ANDROID_LOG_DEBUG, TAG,"output: %f\n", delayLine_->delayBuffer_[9])
                 // why is source 0?
                 //__android_log_print(ANDROID_LOG_DEBUG, TAG,"source: %f\n", source_( *envelope_ ));
                 //__android_log_print(ANDROID_LOG_DEBUG, TAG,"source_before: %f\n",*output);
