@@ -128,7 +128,7 @@ __attribute__((constructor)) static void onDlOpen(void)
     granulator->feedback(.95);
 
 
-    /*
+
     granulator->interonsetTime(.01, .011);
     granulator->grainDuration(.048, .05);
     granulator->delayTime(.1, .1);
@@ -137,7 +137,7 @@ __attribute__((constructor)) static void onDlOpen(void)
     granulator->sustain(.5, .5);
     granulator->skew(0, 0);
     granulator->feedback(0);
-    */
+
     //mallocTest();
 }
 
@@ -170,10 +170,10 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_freqChange (JNIEnv
 
 
 float* filterAudio( StochasticDelayLineGranulator* filter, float input[]){
-    static const int length = synthSamples;
+    static const int length = 64;
     float output[length];
 
-    std::fill_n( output, length, 0);  // zero output
+    std::fill_n( output, length, 0.f);  // zero output
     //for (int i = 0; i < synthSamples; i++) {
     //    output[i] = input[i];
     //}

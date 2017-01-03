@@ -26,7 +26,8 @@
 
 #include <vector>
 #include <algorithm>
-
+#include <android/log.h>
+#define TAG "Scheduler"
 /* Scheduler requires SequenceStrategyT and GrainT to respectively model
     the following concepts:
 
@@ -83,7 +84,7 @@ public:
         while( grainIsActive != activeGrainMask_.end() ){
 
             if( *grainIsActive ){
-                __android_log_print(ANDROID_LOG_DEBUG, TAG,"out1: %f\n",sourceEssence.delayLine_->delayBuffer_[9]);
+                //__android_log_print(ANDROID_LOG_DEBUG, TAG,"out1: %f\n",sourceEssence.delayLine_->delayBuffer_[9]);
                 grain->synthesize( output, length );
                 if( grain->atEnd() ){
                     grain->~GrainT();
@@ -93,7 +94,7 @@ public:
 
             
             if( *grainIsActive == false && iNextOnset < length ){
-                __android_log_print(ANDROID_LOG_DEBUG, TAG,"out22222222222222: %f\n",sourceEssence.delayLine_->delayBuffer_[9]);
+                //__android_log_print(ANDROID_LOG_DEBUG, TAG,"out22222222222222: %f\n",sourceEssence.delayLine_->delayBuffer_[9]);
                 new (grain) GrainT( iNextOnset, sequenceStrategy.nextDuration(),
                                 sourceEssence, envelopeEssence );
 
