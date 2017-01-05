@@ -51,15 +51,18 @@ void* outlock;
 
 // synthesized sawtooth clip
 #define SAWTOOTH_FRAMES 441
-static short sawtoothBuffer[SAWTOOTH_FRAMES];
+//static float sawtoothBuffer[SAWTOOTH_FRAMES];
 
 //CHANGES
 #define numSecs (30)      /* length of sound file to generate (seconds) */
 #define sweepSamples numSecs * 44100
-#define synthSamples 441
+#define synthSamples 64
 double sawSweepBuffer[sweepSamples];
 float sawSynthBuffer[synthSamples];
 short outBuffer[synthSamples];
+
+
+static float sawtoothBuffer[synthSamples];
 
 //GRAIN
 StochasticDelayLineGranulator *granulator;
@@ -98,7 +101,7 @@ void mallocTest () {
 __attribute__((constructor)) static void onDlOpen(void)
 {
     unsigned i;
-    for (i = 0; i < SAWTOOTH_FRAMES; ++i) {
+    for (i = 0; i < synthSamples; ++i) {
         sawtoothBuffer[i] = 32768 - ((i % 100) * 660);
     }
 
@@ -113,7 +116,8 @@ __attribute__((constructor)) static void onDlOpen(void)
     }
 
     for (int i = 0; i < synthSamples; i++) {
-        outBuffer[i] = (short)(sawSynthBuffer[i]*32768) ;
+        //outBuffer[i] = (short)(sawSynthBuffer[i]*32768) ;
+        outBuffer[i] = (short)(sawtoothBuffer[i]*32768) ;
     }
 
     granulator = new StochasticDelayLineGranulator(maxGrains, maxDelaySeconds, SAMPLINGRATE);
@@ -164,7 +168,7 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_freqChange (JNIEnv
     carrierFreq = 55.0f + 825.0f * sliderVal;
     updateSawSynth(sawSynthBuffer, osc, carrierFreq);
     for (int i = 0; i < synthSamples; i++) {
-        outBuffer[i] = (short)(sawSynthBuffer[i]*32768) ;
+        outBuffer[i] = (short)(sawtoothBuffer[i]*32768) ;
     }
 }
 
@@ -245,7 +249,8 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     //phase = 0.0f;
 
     if (pwr) {
-        grainBuffer = filterAudio(granulator, sawSynthBuffer);
+        //grainBuffer = filterAudio(granulator, sawSynthBuffer);
+        grainBuffer = filterAudio(granulator, sawtoothBuffer);
         for (int i = 0; i < synthSamples; i++) {
             //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", sawSynthBuffer[i]);
             //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", grainBuffer[i]);
@@ -298,7 +303,12 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
 
     //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outputBuffer, BUFFERFRAMES);
     //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, sawSweepBuffer, SAWTOOTH_FRAMES);
+
+
     result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, synthSamples);
+
+
+
     //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, sawSynthBuffer, synthSamples);
     assert(SL_RESULT_SUCCESS == result);
     (void)result;
