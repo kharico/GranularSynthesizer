@@ -69,7 +69,7 @@ public:
 
 	void synthesize( float *output, size_t length ) {
         size_t remaining = length;
-        __android_log_print(ANDROID_LOG_DEBUG, TAG,"out: %f, length: %d\n", *output, length);
+        //__android_log_print(ANDROID_LOG_DEBUG, TAG,"out: %f, length: %d\n", *output, length);
 		do{
 			size_t nextBoundary =
                 envelope_.nextBoundary( source_.nextBoundary( remaining ) );
