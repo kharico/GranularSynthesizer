@@ -27,7 +27,7 @@
 #include <vector>
 #include <algorithm>
 #include <android/log.h>
-#define TAG "Scheduler"
+
 /* Scheduler requires SequenceStrategyT and GrainT to respectively model
     the following concepts:
 

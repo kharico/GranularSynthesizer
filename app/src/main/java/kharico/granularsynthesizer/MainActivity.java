@@ -1,16 +1,23 @@
 package kharico.granularsynthesizer;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.media.AudioManager;
+import android.media.AudioRecord;
 import android.os.Build;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.webkit.PermissionRequest;
 import android.widget.Button;
 import android.widget.SeekBar;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -18,7 +25,9 @@ public class MainActivity extends AppCompatActivity {
     boolean pwrOn = false;
     SeekBar freqControl;
     double sliderVal;
+    private final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
 
+    static String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +52,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         createBufferQueueAudioPlayer(sampleRate, bufSize);
+        if (!hasRecordAudioPermission()) {
+            requestRecordAudioPermission();
+        }
+        //createAudioRecorder();
+        //startRecording();
 
        oscPower = (Button)findViewById(R.id.pwr_switch);
        freqControl = (SeekBar) findViewById(R.id.freq);
@@ -109,8 +123,53 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean hasRecordAudioPermission(){
+        boolean hasPermission = (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED);
+
+        Log.d(TAG, "Has RECORD_AUDIO permission? " + hasPermission);
+        return hasPermission;
+    }
+
+    private void requestRecordAudioPermission(){
+
+        String requiredPermission = Manifest.permission.RECORD_AUDIO;
+
+        // If the user previously denied this permission then show a message explaining why
+        // this permission is needed
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                requiredPermission)) {
+
+            //showToast("This app needs to record audio through the microphone....");
+            Toast.makeText(this, "This app needs to record audio through the microphone", Toast.LENGTH_SHORT).show();
+        }
+
+        // request the permission.
+        ActivityCompat.requestPermissions(this,
+                new String[]{requiredPermission},
+                PERMISSIONS_REQUEST_RECORD_AUDIO);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        if (grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Permission Granted", Toast.LENGTH_SHORT).show();
+            createAudioRecorder();
+            startRecording();
+        }
+        else {
+            Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
+        }
+        return;
+        // This method is called when the user responds to the permissions dialog
+    }
+
     public static native void createEngine();
     public static native void createBufferQueueAudioPlayer(int sampleRate, int samplesPerBuf);
+    public static native void createAudioRecorder();
+    public static native void startRecording();
     public static native void shutdown();
     public static native void oscillatorOn(boolean On);
     public static native void freqChange(double sliderVal);

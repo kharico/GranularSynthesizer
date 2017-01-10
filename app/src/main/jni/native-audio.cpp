@@ -23,9 +23,9 @@ static SLAndroidSimpleBufferQueueItf bqPlayerBufferQueue;
 static SLVolumeItf bqPlayerVolume;
 static jint   bqPlayerBufSize = 0;
 
-// Oscillator player interfaces
-static SLObjectItf oscPlayerObject = NULL;
-static SLPlayItf oscPlayerPlay;
+// recorder interfaces
+static SLObjectItf recorderObject = NULL;
+static SLRecordItf recorderRecord;
 static SLAndroidSimpleBufferQueueItf recorderBufferQueue;
 
 // buffer data
@@ -33,6 +33,7 @@ static SLAndroidSimpleBufferQueueItf recorderBufferQueue;
 #define SAMPLINGRATE SL_SAMPLINGRATE_44_1
 short outputBuffer[BUFFERFRAMES];
 short inputBuffer[BUFFERFRAMES];
+
 
 // oscillator data
 int amp = 32768;
@@ -61,7 +62,8 @@ void* outlock;
 double sawSweepBuffer[sweepSamples];
 float sawSynthBuffer[synthSamples];
 short outBuffer[grainSamples];
-
+static float recorderBuffer[grainSamples];
+static volatile int  bqPlayerRecorderBusy = 0;
 
 float sawtoothBuffer[synthSamples];
 
@@ -117,8 +119,7 @@ __attribute__((constructor)) static void onDlOpen(void)
     }
 
     for (int i = 0; i < grainSamples; i++) {
-        outBuffer[i] = (short)(sawSynthBuffer[i]*32768) ;
-        //outBuffer[i] = (short)(sawtoothBuffer[i]*32768) ;
+        //outBuffer[i] = (short)(sawSynthBuffer[i]*32768) ;
     }
 
     granulator = new StochasticDelayLineGranulator(maxGrains, maxDelaySeconds, SAMPLINGRATE);
@@ -250,14 +251,24 @@ short LPF(short *in, short *out, double cutoff) {
     return filterOut;
 }
 
-
-// this callback handler is called every time a buffer finishes recording
+// this callback handler is called every time a buffer finishes playing
 void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
 {
+    assert(bq == bqPlayerBufferQueue);
+    assert(NULL == context);
+
     notifyThreadLock(inlock);
     notifyThreadLock(outlock);
+}
 
-    assert(bq == bqPlayerBufferQueue);
+
+// this callback handler is called every time a buffer finishes recording
+void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
+{
+    //notifyThreadLock(inlock);
+    //notifyThreadLock(outlock);
+
+    assert(bq == recorderBufferQueue);
     assert(NULL == context);
 
     waitThreadLock(inlock);
@@ -267,8 +278,9 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     //phase = 0.0f;
 
     if (pwr) {
-        grainBuffer = filterAudio(granulator, sawSynthBuffer);
-        //grainBuffer = filterAudio(granulator, sawtoothBuffer);
+        //grainBuffer = filterAudio(granulator, sawSynthBuffer);
+        grainBuffer = filterAudio(granulator, recorderBuffer);
+
         for (int i = 0; i < grainSamples; i++) {
             //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", sawSynthBuffer[i]);
             //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", grainBuffer[i]);
@@ -314,7 +326,9 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
             //outputBuffer[j] = 0;
         //}
     //}
-
+    for (int i = 0; i < grainSamples; i++) {
+        outBuffer[i] = (short)(32768*recorderBuffer[i]);
+    }
     SLresult result;
 
     waitThreadLock(outlock);
@@ -322,13 +336,21 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outputBuffer, BUFFERFRAMES);
     //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, sawSweepBuffer, SAWTOOTH_FRAMES);
 
+    result = (*recorderBufferQueue)->Enqueue(recorderBufferQueue, recorderBuffer, grainSamples);
+    assert(SL_RESULT_SUCCESS == result);
 
     result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, grainSamples);
+    assert(SL_RESULT_SUCCESS == result);
+
+    // WORKING SYNTH
+    // result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, grainSamples);
 
 
 
     //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, sawSynthBuffer, synthSamples);
-    assert(SL_RESULT_SUCCESS == result);
+    bqPlayerRecorderBusy = 0;
+
+
     (void)result;
 }
 
@@ -448,6 +470,113 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_createBufferQueueA
     assert(SL_RESULT_SUCCESS == result);
     (void)result;
 
+}
+
+// create audio recorder
+extern "C" void Java_kharico_granularsynthesizer_MainActivity_createAudioRecorder(JNIEnv* env, jclass clazz)
+{
+    SLresult result;
+
+    // configure audio source
+    SLDataLocator_IODevice loc_dev = {SL_DATALOCATOR_IODEVICE, SL_IODEVICE_AUDIOINPUT,
+                                      SL_DEFAULTDEVICEID_AUDIOINPUT, NULL};
+    SLDataSource audioSrc = {&loc_dev, NULL};
+
+    // configure audio sink
+    SLDataLocator_AndroidSimpleBufferQueue loc_bq = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE, 2};
+    SLDataFormat_PCM format_pcm = {SL_DATAFORMAT_PCM, 1, SL_SAMPLINGRATE_16,
+                                   SL_PCMSAMPLEFORMAT_FIXED_16, SL_PCMSAMPLEFORMAT_FIXED_16,
+                                   SL_SPEAKER_FRONT_CENTER, SL_BYTEORDER_LITTLEENDIAN};
+    SLDataSink audioSnk = {&loc_bq, &format_pcm};
+
+    // create audio recorder
+    // (requires the RECORD_AUDIO permission)
+    const SLInterfaceID id[1] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE};
+    const SLboolean req[1] = {SL_BOOLEAN_TRUE};
+    result = (*engineEngine)->CreateAudioRecorder(engineEngine, &recorderObject, &audioSrc,
+                                                  &audioSnk, 1, id, req);
+
+    // realize the audio recorder
+    result = (*recorderObject)->Realize(recorderObject, SL_BOOLEAN_FALSE);
+
+    // get the record interface
+    result = (*recorderObject)->GetInterface(recorderObject, SL_IID_RECORD, &recorderRecord);
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+
+    // get the buffer queue interface
+    result = (*recorderObject)->GetInterface(recorderObject, SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+                                             &recorderBufferQueue);
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+
+    // register callback on the buffer queue
+    result = (*recorderBufferQueue)->RegisterCallback(recorderBufferQueue, bqRecorderCallback,
+                                                      NULL);
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+}
+
+// set the recording state for the audio recorder
+extern "C" void Java_kharico_granularsynthesizer_MainActivity_startRecording(JNIEnv* env, jclass clazz)
+{
+    SLresult result;
+
+    if( bqPlayerRecorderBusy) {
+        return;
+    }
+    // in case already recording, stop recording and clear buffer queue
+    result = (*recorderRecord)->SetRecordState(recorderRecord, SL_RECORDSTATE_STOPPED);
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+    result = (*recorderBufferQueue)->Clear(recorderBufferQueue);
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+
+    // enqueue an empty buffer to be filled by the recorder
+    // (for streaming recording, we would enqueue at least 2 empty buffers to start things off)
+    result = (*recorderBufferQueue)->Enqueue(recorderBufferQueue, recorderBuffer, grainSamples);
+    result = (*recorderBufferQueue)->Enqueue(recorderBufferQueue, recorderBuffer, grainSamples);
+    // the most likely other result is SL_RESULT_BUFFER_INSUFFICIENT,
+    // which for this code example would indicate a programming error
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+
+    // start recording
+    result = (*recorderRecord)->SetRecordState(recorderRecord, SL_RECORDSTATE_RECORDING);
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+    bqPlayerRecorderBusy = 1;
+}
+
+extern "C" void Java_kharico_granularsynthesizer_MainActivity_stopRecording(JNIEnv* env, jclass clazz)
+{
+    SLresult result;
+
+    if( bqPlayerRecorderBusy) {
+        return;
+    }
+    // in case already recording, stop recording and clear buffer queue
+    result = (*recorderRecord)->SetRecordState(recorderRecord, SL_RECORDSTATE_STOPPED);
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+    result = (*recorderBufferQueue)->Clear(recorderBufferQueue);
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+
+    // enqueue an empty buffer to be filled by the recorder
+    // (for streaming recording, we would enqueue at least 2 empty buffers to start things off)
+    result = (*recorderBufferQueue)->Enqueue(recorderBufferQueue, recorderBuffer, grainSamples);
+    // the most likely other result is SL_RESULT_BUFFER_INSUFFICIENT,
+    // which for this code example would indicate a programming error
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+
+    // start recording
+    result = (*recorderRecord)->SetRecordState(recorderRecord, SL_RECORDSTATE_RECORDING);
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+    bqPlayerRecorderBusy = 1;
 }
 
 // shut down the native audio system

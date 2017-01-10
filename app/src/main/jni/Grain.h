@@ -28,7 +28,7 @@
 #include <android/log.h>
 #include "StochasticDelayLineGranulator.h"
 #include <android/log.h>
-#define TAG "delayLine"
+
 /*
     Grain models concept GrainT (see Scheduler.h)
 
