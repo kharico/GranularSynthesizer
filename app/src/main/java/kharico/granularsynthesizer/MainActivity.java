@@ -3,8 +3,11 @@ package kharico.granularsynthesizer;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
 import android.media.AudioManager;
 import android.media.AudioRecord;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -13,13 +16,20 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.TextureView;
 import android.view.View;
 import android.webkit.PermissionRequest;
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
+import java.io.IOException;
+
+import kharico.granularsynthesizer.gl.VideoTextureRenderer;
+
 public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
 
     Button oscPower;
     boolean pwrOn = false;
@@ -27,14 +37,21 @@ public class MainActivity extends AppCompatActivity {
     double sliderVal;
     private final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
 
-    static String TAG = "MainActivity";
+    private Camera mCamera;
+    private TextureView mTextureView;
+    private MediaPlayer mPlayer;
+    private VideoTextureRenderer mRenderer;
+
+    private int surfaceWidth;
+    private int surfaceHeight;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        createEngine();
+        //createEngine();
         int sampleRate = 0;
         int bufSize = 0;
         /*
@@ -43,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
          * IF we do not have a fast audio path, we pass 0 for sampleRate, which will force native
          * side to pick up the 8Khz sample rate.
          */
+        /*
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
             AudioManager myAudioMgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             String nativeParam = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
@@ -50,17 +68,26 @@ public class MainActivity extends AppCompatActivity {
             nativeParam = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
             bufSize = Integer.parseInt(nativeParam);
         }
-
-        createBufferQueueAudioPlayer(sampleRate, bufSize);
-        if (!hasRecordAudioPermission()) {
+        */
+        //createBufferQueueAudioPlayer(sampleRate, bufSize);
+        /*if (!hasRecordAudioPermission()) {
             requestRecordAudioPermission();
-        }
-        //createAudioRecorder();
-        //startRecording();
+        }*/
 
        oscPower = (Button)findViewById(R.id.pwr_switch);
        freqControl = (SeekBar) findViewById(R.id.freq);
        freqControl.setOnSeekBarChangeListener(listener);
+
+        /*
+        mTextureView = (TextureView) findViewById(R.id.surface);
+        mTextureView.setSurfaceTextureListener(this);
+
+        ((Button) findViewById(R.id.filter)).setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
+                sepiaFilter();
+            }
+        });
+        */
     }
 
     @Override
@@ -83,6 +110,25 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "onResume ");
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d(TAG, "onPause ");
+        if (mCamera != null) {
+            mCamera.release();
+            mCamera = null;
+        }
+        if (mRenderer != null)
+            mRenderer.onPause();
     }
 
     @Override
@@ -164,6 +210,80 @@ public class MainActivity extends AppCompatActivity {
         }
         return;
         // This method is called when the user responds to the permissions dialog
+    }
+
+    private void startPlaying()
+    {
+
+        mRenderer = new VideoTextureRenderer(this, mTextureView.getSurfaceTexture(), surfaceWidth, surfaceHeight);
+        mRenderer.setVideoSize(surfaceWidth, surfaceHeight);
+
+
+        Log.d(TAG, "startPlaying ");
+        try {
+            if (mCamera != null)  {
+                mCamera.release();
+                mCamera = null;
+            }
+
+            mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
+            mCamera.setDisplayOrientation(90);
+            //set camera to continually auto-focus
+            Camera.Parameters params = mCamera.getParameters();
+            params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+            mCamera.setParameters(params);
+            //Log.d(TAG, "new texture ");
+            mCamera.setPreviewTexture(mRenderer.getVideoTexture());
+            //Log.d(TAG, "done ");
+            mCamera.startPreview();
+
+        } catch (IOException ioe) {
+            mCamera.release();
+            mCamera = null;
+            throw new RuntimeException("Could not open camera!");
+        }
+    }
+
+    @Override
+    public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height)
+    {
+        Log.d(TAG, "onSurfaceTextureAvailable ");
+        surfaceWidth = width;
+        surfaceHeight = height;
+        startPlaying();
+    }
+
+    @Override
+    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height)
+    {
+        // Ignore
+    }
+
+    @Override
+    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+        Log.d(TAG, "onSurfaceTextureDestroyed ");
+        if (mCamera != null) {
+            mCamera.stopPreview();
+            mCamera.setPreviewCallback(null);
+            mCamera.release();
+            mCamera = null;
+        }
+        return true;
+    }
+
+    @Override
+    public void onSurfaceTextureUpdated(SurfaceTexture surface)
+    {
+        //Invoked every time there's a new Camera preview frame
+
+    }
+
+    public void sepiaFilter() {
+
+        mRenderer.sepiaFilterOn = !(mRenderer.sepiaFilterOn);
+        //mRenderer = null;
+
+        //startPlaying();
     }
 
     public static native void createEngine();
