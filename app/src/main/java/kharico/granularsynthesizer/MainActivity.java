@@ -27,7 +27,7 @@ import java.io.IOException;
 
 import kharico.granularsynthesizer.gl.VideoTextureRenderer;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements TextureView.SurfaceTextureListener {
 
     private static final String TAG = "MainActivity";
 
@@ -35,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
     boolean pwrOn = false;
     SeekBar freqControl;
     double sliderVal;
-    private final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
+    private final int PERMISSIONS_REQUEST = 1;
 
     private Camera mCamera;
     private TextureView mTextureView;
@@ -44,7 +44,6 @@ public class MainActivity extends AppCompatActivity {
 
     private int surfaceWidth;
     private int surfaceHeight;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,11 +73,15 @@ public class MainActivity extends AppCompatActivity {
             requestRecordAudioPermission();
         }*/
 
+        if (!hasPermission(Manifest.permission.CAMERA)) {
+            requestPermissions(Manifest.permission.CAMERA);
+        }
+
        oscPower = (Button)findViewById(R.id.pwr_switch);
        freqControl = (SeekBar) findViewById(R.id.freq);
        freqControl.setOnSeekBarChangeListener(listener);
 
-        /*
+
         mTextureView = (TextureView) findViewById(R.id.surface);
         mTextureView.setSurfaceTextureListener(this);
 
@@ -87,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
                 sepiaFilter();
             }
         });
-        */
+
     }
 
     @Override
@@ -169,17 +172,23 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private boolean hasRecordAudioPermission(){
+    private boolean hasPermission(String permission){
         boolean hasPermission = (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED);
+                permission) == PackageManager.PERMISSION_GRANTED);
 
-        Log.d(TAG, "Has RECORD_AUDIO permission? " + hasPermission);
+        Log.d(TAG, "Has " + permission + " permission? " + hasPermission);
         return hasPermission;
     }
 
-    private void requestRecordAudioPermission(){
+    private boolean hasCameraPermission(){
+        boolean hasPermission = (ContextCompat.checkSelfPermission(this,
+                Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED);
 
-        String requiredPermission = Manifest.permission.RECORD_AUDIO;
+        Log.d(TAG, "Has CAMERA permission? " + hasPermission);
+        return hasPermission;
+    }
+
+    private void requestPermissions(String requiredPermission){
 
         // If the user previously denied this permission then show a message explaining why
         // this permission is needed
@@ -187,13 +196,13 @@ public class MainActivity extends AppCompatActivity {
                 requiredPermission)) {
 
             //showToast("This app needs to record audio through the microphone....");
-            Toast.makeText(this, "This app needs to record audio through the microphone", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "This app needs to access" + requiredPermission, Toast.LENGTH_SHORT).show();
         }
 
         // request the permission.
         ActivityCompat.requestPermissions(this,
                 new String[]{requiredPermission},
-                PERMISSIONS_REQUEST_RECORD_AUDIO);
+                PERMISSIONS_REQUEST);
     }
 
     @Override
@@ -202,8 +211,8 @@ public class MainActivity extends AppCompatActivity {
         if (grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "Permission Granted", Toast.LENGTH_SHORT).show();
-            createAudioRecorder();
-            startRecording();
+            //createAudioRecorder();
+            //startRecording();
         }
         else {
             Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
