@@ -215,7 +215,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
             Toast.makeText(this, "Permission Granted", Toast.LENGTH_SHORT).show();
             Log.d(TAG, "grantedddd ");
             if (requestCode == REQUEST_AUDIO) {
-                Log.d(TAG, "creating Recorder ");
+                Log.d(TAG, "creating Recorder");
                 //createAudioRecorder();
                 //startRecording();
             }
