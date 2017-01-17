@@ -35,11 +35,11 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
     boolean pwrOn = false;
     SeekBar freqControl;
     double sliderVal;
-    private final int PERMISSIONS_REQUEST = 1;
+    private final int REQUEST_AUDIO = 1;
+    private final int REQUEST_CAMERA = 2;
 
     private Camera mCamera;
     private TextureView mTextureView;
-    private MediaPlayer mPlayer;
     private VideoTextureRenderer mRenderer;
 
     private int surfaceWidth;
@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //createEngine();
+        createEngine();
         int sampleRate = 0;
         int bufSize = 0;
         /*
@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
          * IF we do not have a fast audio path, we pass 0 for sampleRate, which will force native
          * side to pick up the 8Khz sample rate.
          */
-        /*
+
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
             AudioManager myAudioMgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             String nativeParam = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
@@ -67,17 +67,22 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
             nativeParam = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
             bufSize = Integer.parseInt(nativeParam);
         }
-        */
-        //createBufferQueueAudioPlayer(sampleRate, bufSize);
-        /*if (!hasRecordAudioPermission()) {
-            requestRecordAudioPermission();
-        }*/
 
-        if (!hasPermission(Manifest.permission.CAMERA)) {
-            requestPermissions(Manifest.permission.CAMERA);
+        createBufferQueueAudioPlayer(sampleRate, bufSize);
+
+        if (!hasPermission(Manifest.permission.RECORD_AUDIO)) {
+            requestPermissions(Manifest.permission.RECORD_AUDIO, REQUEST_AUDIO);
         }
 
-       oscPower = (Button)findViewById(R.id.pwr_switch);
+        createAudioRecorder();
+        startRecording();
+
+        if (!hasPermission(Manifest.permission.CAMERA)) {
+            requestPermissions(Manifest.permission.CAMERA, REQUEST_CAMERA);
+        }
+
+       //oscPower = (Button)findViewById(R.id.pwr_switch);
+       oscPower = (Button)findViewById(R.id.filter);
        freqControl = (SeekBar) findViewById(R.id.freq);
        freqControl.setOnSeekBarChangeListener(listener);
 
@@ -88,6 +93,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         ((Button) findViewById(R.id.filter)).setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                 sepiaFilter();
+                switchPower();
             }
         });
 
@@ -161,7 +167,11 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         }
     };
 
-    public void switchPower (View view) {
+    public void switchPower () {
+
+        pwrOn = !pwrOn;
+        oscillatorOn(pwrOn);
+        /*
         if (pwrOn) {
             oscillatorOn(false);
             pwrOn = false;
@@ -170,6 +180,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
             oscillatorOn(true);
             pwrOn = true;
         }
+        */
     }
 
     private boolean hasPermission(String permission){
@@ -180,29 +191,20 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         return hasPermission;
     }
 
-    private boolean hasCameraPermission(){
-        boolean hasPermission = (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED);
-
-        Log.d(TAG, "Has CAMERA permission? " + hasPermission);
-        return hasPermission;
-    }
-
-    private void requestPermissions(String requiredPermission){
+    private void requestPermissions(String requiredPermission, int reqCode){
 
         // If the user previously denied this permission then show a message explaining why
         // this permission is needed
         if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                 requiredPermission)) {
 
-            //showToast("This app needs to record audio through the microphone....");
             Toast.makeText(this, "This app needs to access" + requiredPermission, Toast.LENGTH_SHORT).show();
         }
 
         // request the permission.
         ActivityCompat.requestPermissions(this,
                 new String[]{requiredPermission},
-                PERMISSIONS_REQUEST);
+                reqCode);
     }
 
     @Override
@@ -211,8 +213,12 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         if (grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "Permission Granted", Toast.LENGTH_SHORT).show();
-            //createAudioRecorder();
-            //startRecording();
+            Log.d(TAG, "grantedddd ");
+            if (requestCode == REQUEST_AUDIO) {
+                Log.d(TAG, "creating Recorder ");
+                //createAudioRecorder();
+                //startRecording();
+            }
         }
         else {
             Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
@@ -241,9 +247,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
             Camera.Parameters params = mCamera.getParameters();
             params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
             mCamera.setParameters(params);
-            //Log.d(TAG, "new texture ");
             mCamera.setPreviewTexture(mRenderer.getVideoTexture());
-            //Log.d(TAG, "done ");
             mCamera.startPreview();
 
         } catch (IOException ioe) {
@@ -290,9 +294,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
     public void sepiaFilter() {
 
         mRenderer.sepiaFilterOn = !(mRenderer.sepiaFilterOn);
-        //mRenderer = null;
 
-        //startPlaying();
     }
 
     public static native void createEngine();

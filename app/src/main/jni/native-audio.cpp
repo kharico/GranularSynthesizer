@@ -72,7 +72,6 @@ StochasticDelayLineGranulator *granulator;
 int maxGrains = 100;
 double maxDelaySeconds = 4; //allocation error at > 5 sec
 float* grainBuffer;
-//StochasticDelayLineGranulator granulator =  StochasticDelayLineGranulator(maxGrains, maxDelaySeconds, SAMPLINGRATE);
 
 //OSCILLATOR
 WaveTableOsc *osc;
@@ -183,7 +182,7 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_freqChange (JNIEnv
     __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"amp: %f", sliderVal);
 
     for (int i = 0; i < grainSamples; i++) {
-        outBuffer[i] = (short)(sawSynthBuffer[i]*32768) ;
+        //outBuffer[i] = (short)(sawSynthBuffer[i]*32768) ;
     }
 }
 
@@ -201,9 +200,7 @@ float* filterAudio( StochasticDelayLineGranulator* filter, float in[]){
     //    output[i] = input[i];
     //}
     filter->synthesize( output, input, length );
-    //for (int i = 0; i < synthSamples; i++) {
-    //    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", output[i]);
-    // }
+
     float *grains = output;
     return grains;
 }
@@ -282,9 +279,12 @@ void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
         grainBuffer = filterAudio(granulator, recorderBuffer);
 
         for (int i = 0; i < grainSamples; i++) {
-            //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", sawSynthBuffer[i]);
-            //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer: %f\n", grainBuffer[i]);
             outBuffer[i] = (short)(grainBuffer[i]*32768);
+        }
+    }
+    else {
+        for (int i = 0; i < grainSamples; i++) {
+            outBuffer[i] = (short)(32768*recorderBuffer[i]);
         }
     }
 
@@ -326,9 +326,7 @@ void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
             //outputBuffer[j] = 0;
         //}
     //}
-    for (int i = 0; i < grainSamples; i++) {
-        outBuffer[i] = (short)(32768*recorderBuffer[i]);
-    }
+
     SLresult result;
 
     waitThreadLock(outlock);
@@ -338,6 +336,7 @@ void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
 
     result = (*recorderBufferQueue)->Enqueue(recorderBufferQueue, recorderBuffer, grainSamples);
     assert(SL_RESULT_SUCCESS == result);
+
 
     result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, grainSamples);
     assert(SL_RESULT_SUCCESS == result);
@@ -466,7 +465,7 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_createBufferQueueA
         //phase += twopi * freq / SAMPLINGRATE;
     }
     */
-    result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, BUFFERFRAMES);
+    result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, grainSamples);
     assert(SL_RESULT_SUCCESS == result);
     (void)result;
 

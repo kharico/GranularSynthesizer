@@ -1,9 +1,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
-    android:layout_height="match_parent" android:paddingLeft="@dimen/activity_horizontal_margin"
-    android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
-    android:paddingBottom="@dimen/activity_vertical_margin" tools:context=".MainActivity">
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
 
     <TextureView
         android:id="@+id/surface"
@@ -23,18 +21,6 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
-
-    <Switch
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textOn="On"
-        android:textOff="Off"
-        android:id="@+id/pwr_switch"
-        android:layout_marginTop="58dp"
-        android:checked="false"
-        android:onClick="switchPower"
-        android:layout_below="@+id/freq"
-        android:layout_centerHorizontal="true" />
 
     <SeekBar
         android:layout_width="match_parent"
