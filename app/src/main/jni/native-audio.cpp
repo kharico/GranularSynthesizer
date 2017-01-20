@@ -19,6 +19,7 @@ static SLObjectItf outputMixObject = NULL;
 static SLObjectItf bqPlayerObject = NULL;
 static SLPlayItf bqPlayerPlay;
 static SLAndroidSimpleBufferQueueItf bqPlayerBufferQueue;
+static SLPlaybackRateItf playRate;
 
 static SLVolumeItf bqPlayerVolume;
 static jint   bqPlayerBufSize = 0;
@@ -27,6 +28,7 @@ static jint   bqPlayerBufSize = 0;
 static SLObjectItf recorderObject = NULL;
 static SLRecordItf recorderRecord;
 static SLAndroidSimpleBufferQueueItf recorderBufferQueue;
+
 
 // buffer data
 #define BUFFERFRAMES 441
@@ -59,10 +61,12 @@ void* outlock;
 #define sweepSamples numSecs * 44100
 #define synthSamples 441
 #define grainSamples 64
+#define recordSamples 44100 * 5
+#define outSamples 44100 * 5
 double sawSweepBuffer[sweepSamples];
 float sawSynthBuffer[synthSamples];
-short outBuffer[grainSamples];
-static float recorderBuffer[grainSamples];
+float outBuffer[outSamples];
+static float recorderBuffer[recordSamples];
 static volatile int  bqPlayerRecorderBusy = 0;
 
 float sawtoothBuffer[synthSamples];
@@ -188,10 +192,10 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_freqChange (JNIEnv
 
 
 float* filterAudio( StochasticDelayLineGranulator* filter, float in[]){
-    static const int length = 64;
+    static const int length = grainSamples;
     float input [length], output[length];
 
-    for (int i = 0; i < grainSamples; i++) {
+    for (int i = 0; i < length; i++) {
         input[i] = in[i];
     }
 
@@ -254,21 +258,19 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     assert(bq == bqPlayerBufferQueue);
     assert(NULL == context);
 
-    notifyThreadLock(inlock);
-    notifyThreadLock(outlock);
+    //notifyThreadLock(inlock);
+    //notifyThreadLock(outlock);
 }
 
 
 // this callback handler is called every time a buffer finishes recording
 void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
 {
-    //notifyThreadLock(inlock);
-    //notifyThreadLock(outlock);
 
     assert(bq == recorderBufferQueue);
     assert(NULL == context);
 
-    waitThreadLock(inlock);
+    //waitThreadLock(inlock);
 
     // signal processing
     unsigned int j;
@@ -279,12 +281,14 @@ void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
         grainBuffer = filterAudio(granulator, recorderBuffer);
 
         for (int i = 0; i < grainSamples; i++) {
-            outBuffer[i] = (short)(grainBuffer[i]*32768);
+            //outBuffer[i] = (short)(grainBuffer[i]*32768);
+            outBuffer[i] = grainBuffer[i];
         }
     }
     else {
-        for (int i = 0; i < grainSamples; i++) {
-            outBuffer[i] = (short)(32768*recorderBuffer[i]);
+        for (int i = 0; i < outSamples; i++) {
+            //outBuffer[i] = (short)(32768*recorderBuffer[i]);
+            outBuffer[i] = recorderBuffer[i];
         }
     }
 
@@ -329,16 +333,22 @@ void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
 
     SLresult result;
 
-    waitThreadLock(outlock);
+    //waitThreadLock(outlock);
 
     //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outputBuffer, BUFFERFRAMES);
     //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, sawSweepBuffer, SAWTOOTH_FRAMES);
 
-    result = (*recorderBufferQueue)->Enqueue(recorderBufferQueue, recorderBuffer, grainSamples);
+    result = (*recorderBufferQueue)->Enqueue(recorderBufferQueue, recorderBuffer, recordSamples);
     assert(SL_RESULT_SUCCESS == result);
 
-
-    result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, grainSamples);
+/*
+    for (int i = 0; i < grainSamples; i++) {
+        if (recorderBuffer[i] != 0) {
+            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "sample: %d", recorderBuffer[i]);
+        }
+    }
+*/  //CHANGE PLAYBACK RATE TO 1/2
+    result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, outSamples);
     assert(SL_RESULT_SUCCESS == result);
 
     // WORKING SYNTH
@@ -414,10 +424,10 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_createBufferQueueA
     SLDataSink audioSnk = {&loc_outmix, NULL};
 
     // create audio player
-    const SLInterfaceID ids[2] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_VOLUME};
-    const SLboolean req[2] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
+    const SLInterfaceID ids[3] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_VOLUME, SL_IID_PLAYBACKRATE};
+    const SLboolean req[3] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
     result = (*engineEngine)->CreateAudioPlayer(engineEngine, &bqPlayerObject, &audioSrc, &audioSnk,
-                                                2, ids, req);
+                                                3, ids, req);
     assert(SL_RESULT_SUCCESS == result);
     (void)result;
 
@@ -441,6 +451,17 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_createBufferQueueA
     result = (*bqPlayerBufferQueue)->RegisterCallback(bqPlayerBufferQueue, bqPlayerCallback, NULL);
     assert(SL_RESULT_SUCCESS == result);
     (void)result;
+
+    // get playback rate interface
+    result = (*bqPlayerObject)->GetInterface(bqPlayerObject,
+                                             SL_IID_PLAYBACKRATE, &playRate);
+    assert(SL_RESULT_SUCCESS == result);
+    (void)result;
+    // set playback rate
+    SLpermille  pRate;
+    SLpermille  newRate = (SLpermille) 1000;
+    (*playRate)->SetRate(playRate, newRate);
+    (*playRate)->GetRate(playRate, &pRate);
 
     // get the volume interface
     result = (*bqPlayerObject)->GetInterface(bqPlayerObject, SL_IID_VOLUME, &bqPlayerVolume);
