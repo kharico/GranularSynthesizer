@@ -3,16 +3,11 @@ package kharico.granularsynthesizer.gl;
 /**
  * Created by fxpa72 on 6/13/2016.
  */
-
 import android.graphics.SurfaceTexture;
 import android.opengl.GLUtils;
 import android.util.Log;
 
-import javax.microedition.khronos.egl.EGL10;
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.egl.EGLContext;
-import javax.microedition.khronos.egl.EGLDisplay;
-import javax.microedition.khronos.egl.EGLSurface;
+import javax.microedition.khronos.egl.*;
 
 /**
  * Renderer which initializes OpenGL 2.0 context on a passed surface and starts a rendering thread

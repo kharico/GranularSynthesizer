@@ -3,9 +3,8 @@ package kharico.granularsynthesizer.gl;
 /**
  * Created by fxpa72 on 6/13/2016.
  */
-
 import android.content.Context;
-import android.graphics.SurfaceTexture;
+import android.graphics.*;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
