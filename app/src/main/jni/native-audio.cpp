@@ -61,7 +61,7 @@ void* outlock;
 #define numSecs (30)      /* length of sound file to generate (seconds) */
 #define sweepSamples numSecs * 44100
 #define synthSamples 441
-#define grainSamples 240
+#define grainSamples 64
 //#define recordSamples 44100
 //#define outSamples 44100
 double sawSweepBuffer[sweepSamples];
@@ -143,7 +143,7 @@ __attribute__((constructor)) static void onDlOpen(void)
     granulator->feedback(.95);
 */
 
-
+/*
     granulator->interonsetTime(.01, .011);
     granulator->grainDuration(.048, .05);
     granulator->delayTime(0, 0);
@@ -152,7 +152,8 @@ __attribute__((constructor)) static void onDlOpen(void)
     granulator->sustain(.5, .5);
     granulator->skew(0, 0);
     granulator->feedback(0);
-    /*
+*/
+
     granulator->interonsetTime(.01, .011);
     granulator->grainDuration(.048, .05);
     granulator->delayTime(0, 0);
@@ -161,7 +162,7 @@ __attribute__((constructor)) static void onDlOpen(void)
     granulator->sustain(.9, .9);
     granulator->skew(0, 0);
     granulator->feedback(0);
-    */
+
     //mallocTest();
 }
 
@@ -201,15 +202,15 @@ float* filterAudio( StochasticDelayLineGranulator* filter, float in[]){
     static const int length = grainSamples;
     float input [length], output[length];
 
-    for (int i = 0; i < length; i++) {
-        input[i] = in[i];
-    }
+    ///for (int i = 0; i < length; i++) {
+    ///    input[i] = in[i];
+    ///}
 
     std::fill_n( output, length, 0.f);  // zero output
     //for (int i = 0; i < synthSamples; i++) {
     //    output[i] = input[i];
     //}
-    filter->synthesize( output, input, length );
+    filter->synthesize( output, in, length );
 
     float *grains = output;
     return grains;
@@ -285,16 +286,21 @@ void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     if (pwr) {
         //grainBuffer = filterAudio(granulator, sawSynthBuffer);
         grainBuffer = filterAudio(granulator, recorderBuffer);
-        //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"grainBuffer");
         for (int i = 0; i < grainSamples; i++) {
             //outBuffer[i] = (short)(grainBuffer[i]*32768);
             outBuffer[i] = grainBuffer[i];
+            if (outBuffer[i] != 0.f) {
+                __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "grain: %f", outBuffer[i]);
+            }
         }
     }
     else {
         for (int i = 0; i < bqPlayerBufSize; i++) {
             //outBuffer[i] = (short)(32768*recorderBuffer[i]);
             outBuffer[i] = recorderBuffer[i];
+            if (outBuffer[i] != 0.f) {
+                __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "record: %f", outBuffer[i]);
+            }
         }
     }
 
@@ -413,7 +419,7 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_createBufferQueueA
     __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"BufferQueue");
     SLresult result;
     if (sampleRate >= 0 && bufSize >= 0 ) {
-        bqPlayerBufSize = 240;
+        bqPlayerBufSize = 64;
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "bufSize: %d", bqPlayerBufSize);
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "sampleRate: %d", sampleRate);
         bqSampRate = sampleRate;
