@@ -119,10 +119,10 @@ public:
 
         for( size_t i=0; i<length; ++i ){
             // smallNoise_ stops denormal problems on i86
-            delayLine_.write( dcBlocker_(   //smallNoise_.generate() +
+            delayLine_.write( dcBlocker_(   smallNoise_.generate() +
                                             input[i] +
                                             output[i] * feedback_ ) );
-            //__android_log_print(ANDROID_LOG_DEBUG, TAG,"out: %f\n", delayLine_.delayBuffer_[9]);
+            //__android_log_print(ANDROID_LOG_DEBUG, TAG,"out: %f\n", input[i]);
         }
 
     }

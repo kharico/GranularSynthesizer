@@ -29,6 +29,7 @@ public:
     DCBlocker() : pos_( 0.f ), speed_( 0.f ) {}
     
     float operator()( float input ){
+        //__android_log_print(ANDROID_LOG_DEBUG, TAG,"in: %f\n", input);
         speed_ = speed_ + (input - pos_) * 0.000004567f;
         pos_ = pos_ + speed_;
         speed_ = speed_ * 0.96f;
