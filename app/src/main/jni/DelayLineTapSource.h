@@ -53,7 +53,8 @@ public:
 
     float operator()( float envelopeValue ){
         float result = envelopeValue * *delayTap_;
-
+        //if (*delayTap_ != 0.f)
+            //__android_log_print(ANDROID_LOG_DEBUG, TAG,"tap: %f\n", *delayTap_);
         ++delayTap_;
 
         return result;

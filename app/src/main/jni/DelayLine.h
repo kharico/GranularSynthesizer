@@ -91,6 +91,7 @@ public:
 	}
 
 	void write( float input ){
+        //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "write: %f",input);
         ++writeIndex_;
         delayBuffer_[ writeIndex_ ] = input;
         if( writeIndex_ == bufferLength_ ){

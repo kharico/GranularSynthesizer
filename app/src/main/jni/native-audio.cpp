@@ -61,7 +61,7 @@ void* outlock;
 #define numSecs (30)      /* length of sound file to generate (seconds) */
 #define sweepSamples numSecs * 44100
 #define synthSamples 441
-#define grainSamples 240
+#define grainSamples 64
 //#define recordSamples 44100
 //#define outSamples 44100
 double sawSweepBuffer[sweepSamples];
@@ -143,17 +143,17 @@ __attribute__((constructor)) static void onDlOpen(void)
     granulator->feedback(.95);
 */
 
-/*
+
     granulator->interonsetTime(.01, .011);
     granulator->grainDuration(.048, .05);
-    granulator->delayTime(0, 0);
+    granulator->delayTime(.1, .1);
     granulator->playbackRate(1, 1);
     granulator->amplitude(.3, .3);
     granulator->sustain(.5, .5);
     granulator->skew(0, 0);
     granulator->feedback(0);
-*/
 
+/*
     granulator->interonsetTime(.01, .011);
     granulator->grainDuration(.048, .05);
     granulator->delayTime(0, 0);
@@ -162,7 +162,7 @@ __attribute__((constructor)) static void onDlOpen(void)
     granulator->sustain(.9, .9);
     granulator->skew(0, 0);
     granulator->feedback(0);
-
+*/
     //mallocTest();
 }
 
@@ -201,12 +201,12 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_freqChange (JNIEnv
 float* filterAudio( StochasticDelayLineGranulator* filter, float in[]){
     static const int length = grainSamples;
     float input [length], output[length];
-
+    /*
     for (int i = 0; i < length; i++) {
         if (in[i] < 0.0f)
             __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "grain: %f", in[i]);
     }
-
+    */
     std::fill_n( output, length, 0.f);  // zero output
     //for (int i = 0; i < synthSamples; i++) {
     //    output[i] = input[i];
@@ -283,6 +283,7 @@ void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
     // signal processing
     unsigned int j;
     //phase = 0.0f;
+    unsigned int nanCount = 0;
 
     if (pwr) {
         //grainBuffer = filterAudio(granulator, sawSynthBuffer);
@@ -290,19 +291,27 @@ void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
         for (int i = 0; i < grainSamples; i++) {
             //outBuffer[i] = (short)(grainBuffer[i]*32768);
             outBuffer[i] = grainBuffer[i];
-            if (outBuffer[i] < 0.0f) {
-                //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "grain: %f", outBuffer[i]);
+            //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "Grain: %f", outBuffer[i]);
+            /*
+            if (__isnanf(outBuffer[i])) {
+                nanCount++;
             }
+            */
         }
+        //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "GrainNaNCount: %d", nanCount);
     }
     else {
         for (int i = 0; i < bqPlayerBufSize; i++) {
             //outBuffer[i] = (short)(32768*recorderBuffer[i]);
             outBuffer[i] = recorderBuffer[i];
-            if (outBuffer[i] < 0.0f) {
-                //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "record: %f", outBuffer[i]);
+            //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "Record: %f", outBuffer[i]);
+            /*
+            if (__isnanf(recorderBuffer[i])) {
+                nanCount++;
             }
+            */
         }
+        //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "NaNCount: %d", nanCount);
     }
 
     //for (j = 0; j < BUFFERFRAMES; j++) {
@@ -420,7 +429,7 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_createBufferQueueA
     __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"BufferQueue");
     SLresult result;
     if (sampleRate >= 0 && bufSize >= 0 ) {
-        bqPlayerBufSize = 240;
+        bqPlayerBufSize = 64;
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "bufSize: %d", bqPlayerBufSize);
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "sampleRate: %d", sampleRate);
         bqSampRate = sampleRate;

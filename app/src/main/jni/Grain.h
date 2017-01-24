@@ -78,13 +78,13 @@ public:
             //__android_log_print(ANDROID_LOG_DEBUG, TAG,"out: %f\n", *output);
             do{
                 envelope_.advance();
-				//*output++ += source_( *envelope_ );
-                *output += source_( *envelope_ );
+				*output++ += source_( *envelope_ );
+                //*output += source_( *envelope_ );
                 //__android_log_print(ANDROID_LOG_DEBUG, TAG,"output: %f\n", delayLine_->delayBuffer_[9])
                 // why is source 0?
                 //__android_log_print(ANDROID_LOG_DEBUG, TAG,"source: %f\n", source_( *envelope_ ));
                 //__android_log_print(ANDROID_LOG_DEBUG, TAG,"source_before: %f\n",*output);
-                output++;
+                //output++;
                 //__android_log_print(ANDROID_LOG_DEBUG, TAG,"source_AFTER: %f\n",*output);
             }while( output < end );
             
