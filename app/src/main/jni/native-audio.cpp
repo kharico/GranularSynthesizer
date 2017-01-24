@@ -203,7 +203,8 @@ float* filterAudio( StochasticDelayLineGranulator* filter, float in[]){
     float input [length], output[length];
 
     for (int i = 0; i < length; i++) {
-        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "grain: %f", in[i]);
+        if (in[i] < 0.0f)
+            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "grain: %f", in[i]);
     }
 
     std::fill_n( output, length, 0.f);  // zero output
