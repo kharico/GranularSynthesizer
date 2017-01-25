@@ -124,6 +124,7 @@ public:
                         input[i] +
                         output[i] * feedback_));
                 //__android_log_print(ANDROID_LOG_DEBUG, TAG,"real output: %f\n", input[i] + output[i] * feedback_);
+                //__android_log_print(ANDROID_LOG_DEBUG, TAG,"dc output: %f\n", dcBlocker_(input[i] + output[i] * feedback_));
             //}
 
         }
