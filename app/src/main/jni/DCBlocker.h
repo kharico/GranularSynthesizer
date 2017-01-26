@@ -30,12 +30,12 @@ public:
     
     float operator()( float input ){
         //__android_log_print(ANDROID_LOG_DEBUG, TAG,"pos: %f\n", pos_);
-        __android_log_print(ANDROID_LOG_DEBUG, TAG,"input: %f\n", input);
+        //__android_log_print(ANDROID_LOG_DEBUG, TAG,"input: %f\n", input);
         if (isnanf(pos_)) {
-            pos_= 0.f;
+            //pos_= 0.f;
         }
         if (isnanf(speed_)) {
-            speed_= 0.f;
+            //speed_= 0.f;
         }
         //__android_log_print(ANDROID_LOG_DEBUG, TAG,"pos: %f\n", pos_);
         speed_ = speed_ + (input - pos_) * 0.000004567f;
