@@ -61,7 +61,7 @@ void* outlock;
 #define numSecs (30)      /* length of sound file to generate (seconds) */
 #define sweepSamples numSecs * 44100
 #define synthSamples 441
-#define grainSamples 240
+#define grainSamples 960
 //#define recordSamples 44100
 //#define outSamples 44100
 double sawSweepBuffer[sweepSamples];
@@ -190,8 +190,8 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_freqChange (JNIEnv
     carrierFreq = 55.0f + 825.0f * sliderVal;
     //updateSawSynth(sawSynthBuffer, osc, carrierFreq);
 
-    granulator->amplitude(0.f, 1.0*sliderVal);
-    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"amp: %f", sliderVal);
+    granulator->delayTime(0.1f, 1.0*sliderVal);
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"delay: %f", sliderVal);
 
     for (int i = 0; i < grainSamples; i++) {
         //outBuffer[i] = (short)(sawSynthBuffer[i]*32768) ;
@@ -429,7 +429,7 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_createBufferQueueA
     __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"BufferQueue");
     SLresult result;
     if (sampleRate >= 0 && bufSize >= 0 ) {
-        bqPlayerBufSize = 240;
+        bqPlayerBufSize = 960;
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "bufSize: %d", bqPlayerBufSize);
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "sampleRate: %d", sampleRate);
         bqSampRate = sampleRate;
