@@ -59,7 +59,8 @@ public:
         , smallNoise_( -.000000001, .000000001 )
         , sr_( sampleRate )
         , feedback_( 0.f ) {
-
+        //__android_log_print(ANDROID_LOG_DEBUG, TAG,"sample rate: %f\n",sr_);
+        //__android_log_print(ANDROID_LOG_DEBUG, TAG,"max delay: %f\n",maxDelaySeconds);
         scheduler_.sourceEssence.delayLine( &delayLine_ );
     }
 
@@ -124,11 +125,14 @@ public:
                         input[i] +
                         output[i] * feedback_));
                 */
+            //if (!__isnanf(input[i])) {
+                //input[i] = 0.f;
+            //}
                 delayLine_.write(   //smallNoise_.generate() +
                     input[i] +
                     output[i] * feedback_);
                 //__android_log_print(ANDROID_LOG_DEBUG, TAG,"real output: %f\n", input[i] + output[i] * feedback_);
-                //__android_log_print(ANDROID_LOG_DEBUG, TAG,"real output: %f\n", output[i]);
+                //__android_log_print(ANDROID_LOG_DEBUG, TAG,"real input: %f\n", input[i]);
                 //__android_log_print(ANDROID_LOG_DEBUG, TAG,"dc output: %f\n", dcBlocker_(input[i] + output[i] * feedback_));
             //}
 

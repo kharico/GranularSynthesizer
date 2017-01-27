@@ -27,6 +27,7 @@
 #include <cassert>
 #include <cmath>
 #include <vector>
+#include "native-audio.h"
 
 #define TAG "delayLine"
 /*
@@ -56,8 +57,9 @@ public:
             //__android_log_print(ANDROID_LOG_DEBUG, TAG,"ul: %lu\n",i);
             //for (unsigned long j = 0; j < delayLine_.bufferLength_; j++) {
             //    __android_log_print(ANDROID_LOG_DEBUG, TAG, "delay value:%lu : %f\n", j,
-            //                        delayLine_.delayBuffer_[j]);
+            //                       delayLine_.delayBuffer_[j]);
             //}
+            //__android_log_print(ANDROID_LOG_DEBUG, TAG,"delay input: %f\n", delayLine_.delayBuffer_[i]);
             return delayLine_.delayBuffer_[i] +
                 (delayLine_.delayBuffer_[i+1]-delayLine_.delayBuffer_[i]) * fraction;
         }
@@ -82,7 +84,7 @@ public:
         , writeIndex_( 0 )
     {
         delayBuffer_ = new float[ bufferLength_ + 1 ];
-
+        __android_log_print(ANDROID_LOG_DEBUG, TAG,"buffer length: %lu\n",bufferLength_);
         std::fill_n( delayBuffer_, bufferLength_ + 1, 0.f );
 	}
 
@@ -94,6 +96,7 @@ public:
         //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "write: %f",input);
         ++writeIndex_;
         delayBuffer_[ writeIndex_ ] = input;
+        //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "writeBuffer: %f",delayBuffer_[writeIndex_]);
         if( writeIndex_ == bufferLength_ ){
             // delayBuffer_[ bufferLength_ ] == delayBuffer_[0]
             // for easy linear interpolation
