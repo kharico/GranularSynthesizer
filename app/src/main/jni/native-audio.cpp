@@ -8,6 +8,25 @@
 #include "StochasticDelayLineGranulator.h"
 #include <vector>
 
+//File Output
+FILE* rawFile = NULL;
+int bClosing = 0;
+int numSamples = 48000*60;
+int numBuffers = 0;
+int buffersPerSec = 48000 / 960;
+int maxBuffers = buffersPerSec * 60;
+
+short numChannels = 1;
+short BitsPerSample = 16;
+int sr = 48000;
+
+int ByteRate = numChannels*BitsPerSample*sr/8;
+short BlockAlign = numChannels*BitsPerSample/8;
+int DataSize = numChannels*numSamples*BitsPerSample/8;
+int chunkSize = 16;
+int totalSize = 46 + DataSize;
+short audioFormat = 1;
+
 // engine interfaces
 static SLObjectItf engineObject = NULL;
 static SLEngineItf engineEngine;
@@ -357,28 +376,27 @@ void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
 
     waitThreadLock(outlock);
 
-    //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outputBuffer, BUFFERFRAMES);
-    //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, sawSweepBuffer, SAWTOOTH_FRAMES);
-
     result = (*recorderBufferQueue)->Enqueue(recorderBufferQueue, recorderBuffer, bqPlayerBufSize);
     //assert(SL_RESULT_SUCCESS == result);
 
-/*
-    for (int i = 0; i < grainSamples; i++) {
-        if (recorderBuffer[i] != 0) {
-            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "sample: %d", recorderBuffer[i]);
-        }
-    }
-*/  //CHANGE PLAYBACK RATE TO 1/2
     result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, bqPlayerBufSize);
     //assert(SL_RESULT_SUCCESS == result);
 
-    // WORKING SYNTH
-    // result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, outBuffer, grainSamples);
+    if (rawFile && (numBuffers < maxBuffers)) {
+        fwrite(outBuffer, (size_t)bqPlayerBufSize, 1, rawFile);
+        numBuffers++;
+        //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Writing to File");
+    }
 
+    if (bClosing || (numBuffers == maxBuffers)) {
+        if (numBuffers == maxBuffers)
+            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Max Buffers");
+        fclose(rawFile);
+        rawFile = NULL;
+        numBuffers++;
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Closing File");
+}
 
-
-    //result = (*bqPlayerBufferQueue)->Enqueue(bqPlayerBufferQueue, sawSynthBuffer, synthSamples);
     bqPlayerRecorderBusy = 0;
 
 
@@ -565,7 +583,7 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_createAudioRecorde
 }
 
 // set the recording state for the audio recorder
-extern "C" void Java_kharico_granularsynthesizer_MainActivity_startRecording(JNIEnv* env, jclass clazz)
+extern "C" void Java_kharico_granularsynthesizer_MainActivity_startRecording(JNIEnv* env, jclass clazz, jstring fileName)
 {
     SLresult result;
 
@@ -594,6 +612,35 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_startRecording(JNI
     assert(SL_RESULT_SUCCESS == result);
     (void)result;
     bqPlayerRecorderBusy = 1;
+
+    bClosing = 0;
+
+    const char* fileString = (env)->GetStringUTFChars(fileName, 0);
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fileString);
+
+    rawFile = fopen(fileString, "wb");
+
+    if (rawFile) {
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "File Open");
+        fwrite("RIFF", sizeof(char), 4,rawFile);
+        fwrite(&totalSize, sizeof(int), 1, rawFile);
+        fwrite("WAVE", sizeof(char), 4, rawFile);
+        fwrite("fmt ", sizeof(char), 4, rawFile);
+        fwrite(&chunkSize, sizeof(int),1,rawFile);
+        fwrite(&audioFormat, sizeof(short), 1, rawFile);
+        fwrite(&numChannels, sizeof(short),1,rawFile);
+        fwrite(&sr, sizeof(int), 1, rawFile);
+        fwrite(&ByteRate, sizeof(int), 1, rawFile);
+        fwrite(&BlockAlign, sizeof(short), 1, rawFile);
+        fwrite(&BitsPerSample, sizeof(short), 1, rawFile);
+        fwrite("data", sizeof(char), 4, rawFile);
+        fwrite(&DataSize, sizeof(int), 1, rawFile);
+    }
+
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,strerror(errno));
+
+    (env)->ReleaseStringUTFChars(fileName, fileString);
+
 }
 
 extern "C" void Java_kharico_granularsynthesizer_MainActivity_stopRecording(JNIEnv* env, jclass clazz)
@@ -652,4 +699,5 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_shutdown(JNIEnv* e
         engineEngine = NULL;
     }
 
+    bClosing = 1;
 }

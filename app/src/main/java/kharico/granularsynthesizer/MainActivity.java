@@ -22,7 +22,9 @@ import android.webkit.PermissionRequest;
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.Toast;
+import android.os.Environment;
 
+import java.io.File;
 import java.io.IOException;
 
 import kharico.granularsynthesizer.gl.VideoTextureRenderer;
@@ -37,6 +39,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
     double sliderVal;
     private final int REQUEST_AUDIO = 1;
     private final int REQUEST_CAMERA = 2;
+    private final int REQUEST_WRITE = 3;
 
     private Camera mCamera;
     private TextureView mTextureView;
@@ -70,12 +73,16 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
 
         createBufferQueueAudioPlayer(sampleRate, bufSize);
 
+        if (!hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            requestPermissions(Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_WRITE);
+        }
+
         if (!hasPermission(Manifest.permission.RECORD_AUDIO)) {
             requestPermissions(Manifest.permission.RECORD_AUDIO, REQUEST_AUDIO);
         }
 
         createAudioRecorder();
-        startRecording();
+        startRecording(createPCMFile("/output.wav"));
 
         if (!hasPermission(Manifest.permission.CAMERA)) {
             requestPermissions(Manifest.permission.CAMERA, REQUEST_CAMERA);
@@ -96,6 +103,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
                 switchPower();
             }
         });
+
 
     }
 
@@ -213,7 +221,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
         if (grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "Permission Granted", Toast.LENGTH_SHORT).show();
-            Log.d(TAG, "grantedddd ");
+            Log.d(TAG, "granted ");
             if (requestCode == REQUEST_AUDIO) {
                 Log.d(TAG, "creating Recorder");
                 //createAudioRecorder();
@@ -297,10 +305,25 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
 
     }
 
+    public String createPCMFile(String fileName) {
+
+
+        Log.d(TAG, Environment.getExternalStorageState());
+        //File dir = Environment.getExternalStorageDirectory();
+        File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC);
+        String dir_path = dir.getPath();
+        Log.d(TAG, dir_path);
+
+        String file_path = dir_path + fileName;
+        Log.d(TAG, file_path);
+
+        return file_path;
+    }
+
     public static native void createEngine();
     public static native void createBufferQueueAudioPlayer(int sampleRate, int samplesPerBuf);
     public static native void createAudioRecorder();
-    public static native void startRecording();
+    public static native void startRecording(String fileName);
     public static native void shutdown();
     public static native void oscillatorOn(boolean On);
     public static native void freqChange(double sliderVal);
