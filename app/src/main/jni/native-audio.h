@@ -16,6 +16,8 @@
 #include <math.h>
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <stdio.h>
+
 
 // for native audio
 #include <SLES/OpenSLES.h>

@@ -126,7 +126,7 @@ public:
                         output[i] * feedback_));
                 */
 
-                delayLine_.write(   smallNoise_.generate() +
+                delayLine_.write(   //smallNoise_.generate() +
                     input[i] +
                     output[i] * feedback_);
                 //__android_log_print(ANDROID_LOG_DEBUG, TAG,"real output: %f\n", input[i] + output[i] * feedback_);
