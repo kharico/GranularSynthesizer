@@ -568,6 +568,6 @@ public class VideoTextureRenderer extends TextureSurfaceRenderer implements Surf
 
     public void updateShader(double sliderVal) {
         shaderVal = (float) sliderVal;
-        Log.d("updateShader", String.valueOf(sliderVal));
+        //Log.d("updateShader", String.valueOf(sliderVal));
     }
 }

@@ -166,22 +166,22 @@ __attribute__((constructor)) static void onDlOpen(void)
 
     granulator->interonsetTime(.01, .011);
     granulator->grainDuration(.048, .05);
-    granulator->delayTime(0.1, 0.1); //0.1, 0.1
-    granulator->playbackRate(1, 1);
+    granulator->delayTime(2.0, 3.0); //0.1, 0.1
+    granulator->playbackRate(1.5, 1.5);
     granulator->amplitude(.3, .3);
     granulator->sustain(.5, .5);
     granulator->skew(0, 0);
-    granulator->feedback(0);
+    granulator->feedback(.8);
 
 /*
-    granulator->interonsetTime(.01, .011);
+    granulator->interonsetTime(.1, .15);
     granulator->grainDuration(.048, .05);
-    granulator->delayTime(0, 0);
-    granulator->playbackRate(1, 1);
-    granulator->amplitude(.9, .9);
-    granulator->sustain(.9, .9);
-    granulator->skew(0, 0);
-    granulator->feedback(0);
+    granulator->delayTime(0.4, 0.405); //0.1, 0.1
+    granulator->playbackRate(1., 2.);
+    granulator->amplitude(.7, .7);
+    granulator->sustain(.1, .1);
+    granulator->skew(0.9, 0.9);
+    granulator->feedback(.8);
 */
     //mallocTest();
 }
@@ -210,7 +210,7 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_freqChange (JNIEnv
     //updateSawSynth(sawSynthBuffer, osc, carrierFreq);
 
     granulator->delayTime(0.1f, 1.0*sliderVal);
-    //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"delay: %f", sliderVal);
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"delay: %f", sliderVal);
 
     for (int i = 0; i < grainSamples; i++) {
         //outBuffer[i] = (short)(sawSynthBuffer[i]*32768) ;
