@@ -161,7 +161,7 @@ public class MainActivity extends AppCompatActivity implements TextureView.Surfa
             if (fromUser) {
                 sliderVal = progress / (double) seekBar.getMax();
                 freqChange(sliderVal);
-                //mRenderer.updateShader(sliderVal);
+                mRenderer.updateShader(sliderVal);
             }
         }
 
