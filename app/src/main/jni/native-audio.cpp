@@ -210,7 +210,7 @@ extern "C" void Java_kharico_granularsynthesizer_MainActivity_freqChange (JNIEnv
     //updateSawSynth(sawSynthBuffer, osc, carrierFreq);
 
     granulator->delayTime(0.1f, 1.0*sliderVal);
-    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"delay: %f", sliderVal);
+    //__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"delay: %f", sliderVal);
 
     for (int i = 0; i < grainSamples; i++) {
         //outBuffer[i] = (short)(sawSynthBuffer[i]*32768) ;

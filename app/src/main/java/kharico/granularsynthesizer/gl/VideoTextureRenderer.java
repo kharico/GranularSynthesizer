@@ -17,6 +17,12 @@ import java.nio.ShortBuffer;
 
 public class VideoTextureRenderer extends TextureSurfaceRenderer implements SurfaceTexture.OnFrameAvailableListener
 {
+
+    public static volatile float shaderVal = 0.f;
+    private static volatile float negVal = 1.0f - shaderVal;
+    private static volatile String shaderString = "    lowp vec4 tempColor = vec4(" + String.valueOf(negVal)
+                                            + "*color + " + String.valueOf(shaderVal) + "*rand(color));";
+
     private static final String vertexShaderCode =
             "attribute vec4 vPosition;" +
                     "attribute vec4 vTexCoordinate;" +
@@ -32,9 +38,13 @@ public class VideoTextureRenderer extends TextureSurfaceRenderer implements Surf
                     "precision mediump float;" +
                     "uniform samplerExternalOES texture;" +
                     "varying vec2 v_TexCoordinate;" +
+                    "float rand(vec4 co){" +
+                    "    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);" +
+                    "}" +
                     "void main () {" +
                     "    vec4 color = texture2D(texture, v_TexCoordinate);" +
                     "    gl_FragColor = color;" +
+                    //"    gl_FragColor = vec4(rand(color));" +
                     "}";
 
     private static final String sepiaFragmentShaderCode =
@@ -42,14 +52,20 @@ public class VideoTextureRenderer extends TextureSurfaceRenderer implements Surf
                     //"precision mediump float;" +
                     "uniform samplerExternalOES texture;" +
                     "varying vec2 v_TexCoordinate;" +
+                    "float rand(vec4 co){" +
+                    "    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);" +
+                    "}" +
                     "void main () {" +
                     "    vec4 color = texture2D(texture, v_TexCoordinate);" +
+                    "    lowp vec4 tempColor = vec4(0.9*color + 0.1*rand(color));" +
+                    //shaderString +
                     "    lowp vec4 outputColor;" +
-                    "    outputColor.r = (color.r * 0.393) + (color.g * 0.769) + (color.b * 0.189);" +
-                    "    outputColor.g = (color.r * 0.349) + (color.g * 0.686) + (color.b * 0.168);" +
-                    "    outputColor.b = (color.r * 0.272) + (color.g * 0.534) + (color.b * 0.131);" +
+                    "    outputColor.r = (tempColor.r * 0.393) + (tempColor.g * 0.769) + (tempColor.b * 0.189);" +
+                    "    outputColor.g = (tempColor.r * 0.349) + (tempColor.g * 0.686) + (tempColor.b * 0.168);" +
+                    "    outputColor.b = (tempColor.r * 0.272) + (tempColor.g * 0.534) + (tempColor.b * 0.131);" +
                     "    outputColor.a = 1.0;" +
                     "    gl_FragColor = outputColor;" +
+                    //"    gl_FragColor = vec4(rand(outputColor))*outputColor;" +
                     "}";
 
     private static float squareSize = 1.0f;
@@ -319,5 +335,56 @@ public class VideoTextureRenderer extends TextureSurfaceRenderer implements Surf
         {
             frameAvailable = true;
         }
+    }
+
+    public void updateShader(double sliderVal) {
+        shaderVal = (float) sliderVal;
+        String sString = String.valueOf(shaderVal);
+        Log.d("updateShader", "ShaderVal: \n" + sString);
+        negVal = 1.0f - shaderVal;
+        shaderString = "    lowp vec4 tempColor = vec4(" + String.valueOf(negVal)
+                + "*color + " + String.valueOf(shaderVal) + "*rand(color));";
+
+        String sepiaFragmentShaderCode =
+                "#extension GL_OES_EGL_image_external : require\n" +
+                        //"precision mediump float;" +
+                        "uniform samplerExternalOES texture;" +
+                        "varying vec2 v_TexCoordinate;" +
+                        "float rand(vec4 co){" +
+                        "    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);" +
+                        "}" +
+                        "void main () {" +
+                        "    vec4 color = texture2D(texture, v_TexCoordinate);" +
+                        //"    lowp vec4 tempColor = vec4(0.9*color + 0.1*rand(color));" +
+                        shaderString +
+                        "    lowp vec4 outputColor;" +
+                        "    outputColor.r = (tempColor.r * 0.393) + (tempColor.g * 0.769) + (tempColor.b * 0.189);" +
+                        "    outputColor.g = (tempColor.r * 0.349) + (tempColor.g * 0.686) + (tempColor.b * 0.168);" +
+                        "    outputColor.b = (tempColor.r * 0.272) + (tempColor.g * 0.534) + (tempColor.b * 0.131);" +
+                        "    outputColor.a = 1.0;" +
+                        "    gl_FragColor = outputColor;" +
+                        //"    gl_FragColor = vec4(rand(outputColor))*outputColor;" +
+                        "}";
+/*
+        FilterFragmentShaderHandle = GLES20.glCreateShader(GLES20.GL_FRAGMENT_SHADER);
+        GLES20.glShaderSource(FilterFragmentShaderHandle, sepiaFragmentShaderCode);
+        GLES20.glCompileShader(FilterFragmentShaderHandle);
+
+        filterShaderProgram = GLES20.glCreateProgram();
+        GLES20.glAttachShader(filterShaderProgram, vertexShaderHandle);
+        GLES20.glAttachShader(filterShaderProgram, FilterFragmentShaderHandle);
+        GLES20.glLinkProgram(filterShaderProgram);
+        checkGlError("Shader program compile");
+
+
+        int[] status = new int[1];
+        GLES20.glGetProgramiv(filterShaderProgram, GLES20.GL_LINK_STATUS, status, 0);
+        if (status[0] != GLES20.GL_TRUE) {
+            String error = GLES20.glGetProgramInfoLog(filterShaderProgram);
+            Log.e("SurfaceTest", "Error while linking program:\n" + error);
+        }
+
+*/
+        loadShaders();
     }
 }
